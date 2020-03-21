@@ -1,4 +1,4 @@
-# GuidedProposals
+# GuidedProposals.jl
 
 [![Stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://mmider.github.io/GuidedProposals.jl/stable)
 [![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://mmider.github.io/GuidedProposals.jl/dev)
