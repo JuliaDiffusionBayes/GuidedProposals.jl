@@ -5,8 +5,6 @@
 #                                                                              #
 #==============================================================================#
 
-using DiffEqCallbacks, OrdinaryDiffEq, LinearAlgebra
-
 # allow for a switch between MLμ and other solvers only at the terminal
 # observation
 """
@@ -49,7 +47,7 @@ for simulation of guided proposals and computation of their likelihood.
     computations of ODE solvers). Finally, `next_guiding_term` is the guided
     proposal for the subsequent inter-observation interval.
 """
-struct GuidProp{R,R2,O,C,T,SM,SH,SP}
+struct GuidProp{R,R2,O,T,SM,SH,SP}
     P_target::R
     P_aux::R2
     obs::O
@@ -131,7 +129,7 @@ end
 
 Nothing to initialise if a flag for HFc solver is turned off
 """
-init_hfc(::Val{false}, ...) = nothing
+init_hfc(::Val{false}, args...) = nothing
 
 """
     init_hfc(::Val{true}, tt, P_aux, obs, choice, next_guiding_term)
@@ -191,6 +189,6 @@ function init_xT_plus(
     zeros(ode_data_type, dim_of_process)
 end
 
-init_mlμ(::Any, ...) = nothing
+init_mlμ(::Any, args...) = nothing
 
-init_pν(::Any, ...) = nothing
+init_pν(::Any, args...) = nothing

@@ -66,24 +66,24 @@ struct HFcSolver{Tp,Tcb,T}
             # increments (to-be-computed here)
             dH, dF, dc = _H(du, access), _F(du, access), _c(du, access)
             # temporary variables
-            tH = tempH(du, access)
+            tmat, tvec = _temp_matH(du, access), _temp_vecH(du, access)
             # ---
 
             # ODEs
             # ---
             # dH = - (_B' * H) - (H * _B) + outer(H * σ)
-            mul!(tH, H, a)
-            mul!(dH, tH, H')
+            mul!(tmat, H, a)
+            mul!(dH, tmat, tmat')
             mul!(dH, H, B, -true, true)
             mul!(dH, B', H, -true, true)
             # dF = - (_B' * F) + (H * a * F) + (H * _β)
-            mul!(dF, tH, F)
+            mul!(dF, tmat, F)
             mul!(dF, B', F, -true, true)
             mul!(dF, H, β, true, true)
             # dc = dot(_β, F) + 0.5*outer(F' * _σ) + 0.5*sum(H .* _a)
-            dc[1] = 0.5*tr(tH)
-            mul!(tc, F', a)
-            mul!(dc, tc, F, 0.5, true)
+            dc[1] = 0.5*tr(tmat)
+            mul!(tvec, F', a)
+            mul!(dc, tvec, F, 0.5, true)
             mul!(dc, β', F, true, true)
             # ---
         end
