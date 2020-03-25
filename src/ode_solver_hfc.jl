@@ -113,35 +113,44 @@ struct HFcSolver{Tp,Tsv,Tcb,T,K}
         new{Tp,Tsv,Tcb,T,K}(prob, saved_values, callback, HFcT, HFc0, buffer)
     end
 
-    #TODO let's worry about this later
-    #=
-    function HFcSolver(::Any, (t0, T), xT, dim_of_process, P, solver_type)
-        access = Val{dim_of_process}()
+    function HFcSolver(
+            ::Val{:outofplace},
+            tt,
+            xT_plus,
+            P,
+            obs,
+            solver_type,
+            save_as_type,
+        )
+        access = Val{dimension(P).process}()
+        HFcT = update_HFc(xT_plus, obs, access)
 
-        function HFc_update!(du, u, p, t)
-            H, F, c = _H(u, access), _F(u, access), _c(u, access)
-            _B, _β, _σ, _a = B!(u, t, P), β!(u, t, P), σ!(u, t, P), a!(u, t, P)
+        function HFc_update(u, p, t)
+            H, F, c = static_accessor_HFc(u, access)
+            _B, _β, _σ, _a = B(t, P), β(t, P), σ(t, P), a(t, P)
 
-            _H(du, access) .= - (_B' * H) - (H * _B) + outer(H * _σ)
-            _F(du, access) .= - (_B' * F) + (H * a * F) + (H * _β)
-            _c(du, access) .= dot(_β, F) + 0.5*outer(F' * _σ) + 0.5*sum(H .* _a)
+            dH = - (_B' * H) - (H * _B) + outer(H * _σ)
+            dF = - (_B' * F) + (H * _a * F) + (H * _β)
+            dc = dot(_β, F) + 0.5*outer(F' * _σ) + 0.5*sum(H .* _a)
+            vcat(SVector(dH), dF, SVector(dc))
         end
 
-        prob = ODEProblem(HFc_update!, xT, (T, t0))
+        TH, TF, Tc = prepare_saving_type(Val{:hfc}(), save_as_type)
+        prob = ODEProblem(HFc_update, HFcT, (tt[end], tt[1]))
         saved_values = SavedValues(Float64, Tuple{TH,TF,Tc})
         callback = SavingCallback(
-            (u,t,integrator)->(
-                TH( _H(u,access) ),
-                TF( _F(u,access) ),
-                Tc( _c(u,access) ),
-            ),
-            saved_values
+            (u,t,integrator) -> static_accessor_HFc(u, access),
+            saved_values;
+            saveat=reverse(tt),
+            tdir=-1,
+            save_everystep=false,
         )
-        Tcb = typeof(callback)
-        solve(prob, solver_type, callback=callback)
-        new{TH,TF,Tc,Tcb}(saved_values, callback)
+        sol = solve(prob, solver_type, callback=callback)
+        HFc0 = sol.u[end]
+        Tp, Tsv, Tcb = typeof(prob), typeof(saved_values), typeof(callback)
+        T, K = typeof(HFcT), Nothing
+        new{Tp,Tsv,Tcb,T,K}(prob, saved_values, callback, HFcT, HFc0, nothing)
     end
-    =#
 end
 
 """
@@ -166,6 +175,17 @@ function update_HFc!(u_T, u_Tplus, obs, access)
         .+ 0.5*( m*log(2π) + log(det(obs.Σ)) + (v-μ)'*Λ*(v-μ) )
     )
 end
+
+function update_HFc(u_Tplus, obs, access)
+    L, Λ, v, μ = obs.L, obs.Λ, obs.obs, obs.μ
+    m, d = size(L)
+    H, F, c = static_accessor_HFc(u_Tplus, access)
+    dH = L'*Λ*L
+    dF = L*Λ*v
+    dc = 0.5*( m*log(2π) + log(det(obs.Σ)) + (v-μ)'*Λ*(v-μ) )
+    vcat(SVector(H + dH), (F + dF), SVector(c+dc))
+end
+
 
 
 function prepare_saving_type(::Val{:hfc}, types)

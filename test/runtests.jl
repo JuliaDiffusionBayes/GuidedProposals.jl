@@ -1,4 +1,4 @@
-using GuidedProposals, OrdinaryDiffEq
+using GuidedProposals, OrdinaryDiffEq, StaticArrays
 using Test
 
 @testset "GuidedProposals.jl" begin
@@ -88,7 +88,76 @@ using Test
         )
     )
 
+    gp2 = GuidProp(params_intv2..., nothing)
+    gp1 = GuidProp(params_intv1..., gp2)
 
+    H(gp2, 3)
+    F(gp2, 10)
+    c(gp2, 15)
+
+    H(gp1, 3)
+    F(gp1, 10)
+    c(gp1, 15)
+
+
+    GuidedProposals.B(t, P::LVAux) = @SMatrix [
+        0.0   (-P.β * P.γ/P.δ);
+        (P.α * P.δ/P.β)  0.0
+    ]
+
+    GuidedProposals.β(t, P::LVAux) = @SVector [P.δ*P.α/P.δ, -P.α*P.γ/P.β]
+
+    GuidedProposals.σ(t, P::LVAux) = @SMatrix [
+        P.σ1 0.0;
+        0.0 P.σ2
+    ]
+
+    GuidedProposals.a(t, P::LVAux) = @SMatrix [
+        P.σ1^2 0.0;
+        0.0 P.σ2^2
+    ]
+
+    params_intv1 = (
+        tt = 0.0:0.01:1.0,
+        P_target = nothing,
+        P_aux = LVAux(2.0/3.0, 4.0/3.0, 1.0, 1.0, 0.2, 0.2),
+        obs = (
+            obs = [1.0, 2.0],
+            Σ = [1.0 0.0; 0.0 1.0],
+            Λ = [1.0 0.0; 0.0 1.0],
+            μ = [0.0, 0.0],
+            L = [1.0 0.0; 0.0 1.0],
+        ),
+        solver_choice=(
+            solver=Tsit5(),
+            ode_type=:HFc,
+            convert_to_HFc=false,
+            inplace=false,
+            save_as_type=nothing,
+            ode_data_type=nothing,
+        )
+    )
+
+    params_intv2 = (
+        tt = 1.0:0.01:2.0,
+        P_target = nothing,
+        P_aux = LVAux(2.0/3.0, 4.0/3.0, 1.0, 1.0, 0.2, 0.2),
+        obs = (
+            obs = [2.0, 3.0],
+            Σ = [1.0 0.0; 0.0 1.0],
+            Λ = [1.0 0.0; 0.0 1.0],
+            μ = [0.0, 0.0],
+            L = [1.0 0.0; 0.0 1.0],
+        ),
+        solver_choice=(
+            solver=Tsit5(),
+            ode_type=:HFc,
+            convert_to_HFc=false,
+            inplace=false,
+            save_as_type=nothing,
+            ode_data_type=nothing,
+        )
+    )
 
     gp2 = GuidProp(params_intv2..., nothing)
     gp1 = GuidProp(params_intv1..., gp2)

@@ -8,7 +8,7 @@
 # allow for a switch between MLμ and other solvers only at the terminal
 # observation
 """
-    GuidProp{R,R2,O,C,SM,SH,SP}
+    GuidProp{R,R2,O,T,S}
 
 Struct defining `guided proposals` of M Schauer, F van der Meulen and H van
 Zanten. See Mider M, Schauer M and van der Meulen F `Continuous-discrete
@@ -47,13 +47,11 @@ for simulation of guided proposals and computation of their likelihood.
     computations of ODE solvers). Finally, `next_guiding_term` is the guided
     proposal for the subsequent inter-observation interval.
 """
-struct GuidProp{R,R2,O,T,SM,SH,SP}
+struct GuidProp{R,R2,O,T,S}
     P_target::R
     P_aux::R2
     obs::O
-    MLμ::SM
-    HFc::SH
-    Pν::SP
+    guiding_term::S
 
     function GuidProp(
             tt,
@@ -77,14 +75,11 @@ struct GuidProp{R,R2,O,T,SM,SH,SP}
             solver_choice,
             next_guiding_term,
         )
-        SM, SH, SP, MLμ, HFc, Pν = init_solvers(params)
-        # define a helper flag for accessors to H,F,c
-        HFc_access_path = (
-            (solver_choice.convert_to_HFc && (lowercase(ode_type)==:mlμ) ) ?
-            :via_mlμ :
-            :via_hfc
-        )
-        new{R,R2,O,HFc_access_path,SM,SH,SP}(P_target, P_aux, obs, MLμ, HFc, Pν)
+        S, guiding_term = init_solvers(params)
+        # a helper flag
+        T = lowercase(solver_choice.ode_type)
+
+        new{R,R2,O,T,S}(P_target, P_aux, obs, guiding_term)
     end
 end
 
@@ -104,31 +99,16 @@ function init_solvers(params)
     ode_choice = lowercase(sol.ode_type)
     @assert ode_choice in [:hfc, :mlμ, :pν]
 
-    MLμ = init_mlμ(
-        Val{ode_choice == :mlμ}(),
+    guiding_term = init_solver(
+        Val{ode_choice}(),
         Val{sol.convert_to_HFc}(),
         params...
     )
-    HFc = init_hfc(
-        Val{ode_choice == :hfc}(),
-        params...
-    )
-    Pν = init_pν(
-        Val{ode_choice == :pν}(),
-        params...
-    )
-    typeof(MLμ), typeof(HFc), typeof(Pν), MLμ, HFc, Pν
+    typeof(guiding_term), guiding_term
 end
 
 """
-    init_hfc(::Val{false}, ...)
-
-Nothing to initialise if a flag for HFc solver is turned off
-"""
-init_hfc(::Val{false}, args...) = nothing
-
-"""
-    init_hfc(::Val{true}, tt, P_aux, obs, choice, next_guiding_term)
+    init_solver(::Val{:hfc}, ::Any, tt, P_aux, obs, choice, next_guiding_term)
 
 Initialise ODE solver for H,F,c, preallocate space and solve it once. `tt` is
 the time-grid on which `∇logρ` is to be saved. `P_aux` is the auxiliary law,
@@ -142,12 +122,12 @@ the ODE solvers should store all the data (if set to `nothing`, then
 Vector{Float64} is used by default)). Finally, `next_guiding_term` is the guided
 proposal used on the subsequent inter-observation interval.
 """
-function init_hfc(::Val{true}, tt, P_aux, obs, choice, next_guiding_term)
+function init_solver(::Val{:hfc}, ::Any, tt, P_aux, obs, choice, next_guiding_term)
     d = dimension(P_aux).process
     inplace = Val{choice.inplace ? :inplace : :outofplace}()
     xT_plus = (
         next_guiding_term===nothing ?
-        init_xT_plus(Val{:hfc}(), inplace, d, choice.ode_data_type) :
+        init_xT_plus(Val{:hfc}(), d, choice.ode_data_type) :
         HFc0(next_guiding_term)
     )
 
@@ -162,12 +142,10 @@ function init_hfc(::Val{true}, tt, P_aux, obs, choice, next_guiding_term)
     )
 end
 
-HFc0(P::GuidProp{R,R2,O,C,T}) where {R,R2,O,C,T<:Val{:via_hfc}} = HFc0(P.HFc)
-HFc0(P::GuidProp{R,R2,O,C,T}) where {R,R2,O,C,T<:Val{:via_mlμ}} = HFc0(P.MLμ)
+HFc0(P::GuidProp) = HFc0(P.guiding_term)
 
 function init_xT_plus(
         ::Val{:hfc},
-        ::Val{:inplace},
         dim_of_process,
         ode_data_type
     )
@@ -175,29 +153,13 @@ function init_xT_plus(
     zeros(ode_data_type, size_of_HFc_solution(dim_of_process))
 end
 
-function init_xT_plus(
-        ::Val{:hfc},
-        ::Val{:outofplace},
-        dim_of_process,
-        ode_data_type
-    )
-    ode_data_type = ( ode_data_type===nothing ? Float64 : ode_data_type )
-    zeros(ode_data_type, dim_of_process)
-end
-
 size_of_HFc_solution(d) = d^2+d+1
 size_of_HFc_buffer(d) = 4*d^2+d
 
-init_mlμ(::Any, args...) = nothing
+init_solver(::Val{:mlμ}, args...) = nothing
 
-init_pν(::Any, args...) = nothing
+init_solver(::Val{:Pν}, args...) = nothing
 
-H(P::GuidProp{R,R2,O,:via_mlμ}, i) where {R,R2,O} = H(P.MLμ, i)
-F(P::GuidProp{R,R2,O,:via_mlμ}, i) where {R,R2,O} = F(P.MLμ, i)
-c(P::GuidProp{R,R2,O,:via_mlμ}, i) where {R,R2,O} = c(P.MLμ, i)
-HFc0(P::GuidProp{R,R2,O,:via_mlμ}) where {R,R2,O} = error("not implemented")
-
-H(P::GuidProp{R,R2,O,:via_hfc}, i) where {R,R2,O} = H(P.HFc, i)
-F(P::GuidProp{R,R2,O,:via_hfc}, i) where {R,R2,O} = F(P.HFc, i)
-c(P::GuidProp{R,R2,O,:via_hfc}, i) where {R,R2,O} = c(P.HFc, i)
-HFc0(P::GuidProp{R,R2,O,:via_hfc}) where {R,R2,O} = P.HFc.HFc0
+H(P::GuidProp, i) = H(P.guiding_term, i)
+F(P::GuidProp, i) = F(P.guiding_term, i)
+c(P::GuidProp, i) = c(P.guiding_term, i)

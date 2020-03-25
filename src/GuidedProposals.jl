@@ -1,8 +1,13 @@
 module GuidedProposals
 
 using DiffEqCallbacks, OrdinaryDiffEq, LinearAlgebra
+using StaticArrays
 
 #these need to be defined:
+B() = nothing
+β() = nothing
+σ() = nothing
+a() = nothing
 B!() = nothing
 β!() = nothing
 σ!() = nothing
