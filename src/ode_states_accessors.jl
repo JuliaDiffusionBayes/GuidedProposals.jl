@@ -132,39 +132,6 @@ Provide a view to contents of a scalar `c` that is stored in a container `data`
     )
 end
 
-"""
-    _temp_matH(data::AbstractArray, ::Val{T}) where T
-
-Provide a view to contents of a temporary matrix, stored in a container `data`.
-"""
-@generated function _temp_matH(data::AbstractArray, ::Val{T}) where T
-    Expr(
-        :call,
-        :reshape,
-        Expr(
-            :call,
-            :view,
-            :data,
-            (T*T+T+2):(2*T*T+T+1)
-        ),
-        (T,T)
-    )
-end
-
-"""
-    _temp_vecH(data::AbstractArray, ::Val{T}) where T
-
-Provide a view to contents of a temporary vector, stored in a container `data`.
-"""
-@generated function _temp_vecH(data::AbstractArray, ::Val{T}) where T
-    Expr(
-        :call,
-        :view,
-        :data,
-        (T*T+T+2):(T*T+2*T+1)
-    )
-end
-
 
 #------------------------------------------------------------------------------#
 #                              For P, ν solvers
@@ -200,5 +167,125 @@ Provide a view to contents of a vector `ν` that are stored in a container `data
         :view,
         :data,
         (T*T+1):(T*(T+1))
+    )
+end
+
+
+#------------------------------------------------------------------------------#
+#                        For accessing B, β, σ and a
+#------------------------------------------------------------------------------#
+"""
+    _B(buffer::AbstractArray, ::Val{T}) where T
+
+Provide a view to contents of a matrix `B` that are stored in a container
+`buffer`
+"""
+@generated function _B(buffer::AbstractArray, ::Val{T}) where T
+    Expr(
+        :call,
+        :reshape,
+        Expr(
+            :call,
+            :view,
+            :buffer,
+            1:(T*T)
+        ),
+        (T,T)
+    )
+end
+
+"""
+    _β(buffer::AbstractArray, ::Val{T}) where T
+
+Provide a view to contents of a vector `β` that are stored in a container
+`buffer`
+"""
+@generated function _β(buffer::AbstractArray, ::Val{T}) where T
+    Expr(
+        :call,
+        :view,
+        :buffer,
+        (T*T+1):(T*T+T)
+    )
+end
+
+"""
+    _σ(buffer::AbstractArray, ::Val{T}) where T
+
+Provide a view to contents of a matrix `σ` that are stored in a container
+`buffer`
+"""
+@generated function _σ(buffer::AbstractArray, ::Val{T}) where T
+    Expr(
+        :call,
+        :reshape,
+        Expr(
+            :call,
+            :view,
+            :buffer,
+            (T*T+T+1):(2*T*T+T)
+        ),
+        (T,T)
+    )
+end
+
+"""
+    _a(buffer::AbstractArray, ::Val{T}) where T
+
+Provide a view to contents of a matrix `a` that are stored in a container
+`buffer`
+"""
+@generated function _a(buffer::AbstractArray, ::Val{T}) where T
+    Expr(
+        :call,
+        :reshape,
+        Expr(
+            :call,
+            :view,
+            :buffer,
+            (2*T*T+T+1):(3*T*T+T)
+        ),
+        (T,T)
+    )
+end
+
+#------------------------------------------------------------------------------#
+#                  Accessing additional, temporary storage
+#------------------------------------------------------------------------------#
+
+"""
+    _temp_matH(data::AbstractArray, ::Val{T}) where T
+
+Provide a view to contents of a temporary matrix, stored in a container
+`buffer`. NOTE: `_temp_matH` and `_temp_vecH` access overlapping chunks of
+memory.
+"""
+@generated function _temp_matH(buffer::AbstractArray, ::Val{T}) where T
+    Expr(
+        :call,
+        :reshape,
+        Expr(
+            :call,
+            :view,
+            :buffer,
+            (3*T*T+T+1):(4*T*T+T)
+        ),
+        (T,T)
+    )
+end
+
+"""
+    _temp_vecH(data::AbstractArray, ::Val{T}) where T
+
+Provide a view to contents of a temporary vector, stored in a container
+`buffer`. NOTE: `_temp_matH` and `_temp_vecH` access overlapping chunks of
+memory.
+"""
+@generated function _temp_vecH(buffer::AbstractArray, ::Val{T}) where T
+    Expr(
+        :call,
+        :view,
+        :buffer,
+        (3*T*T+T+1):(3*T*T+2*T)
     )
 end

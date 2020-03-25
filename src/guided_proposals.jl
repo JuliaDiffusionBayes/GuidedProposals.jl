@@ -61,7 +61,7 @@ struct GuidProp{R,R2,O,T,SM,SH,SP}
             P_aux::R2,
             obs::O,
             solver_choice=(
-                solver=:Tsit5,
+                solver=Tsit5(),
                 ode_type=:HFc,
                 convert_to_HFc=false,
                 inplace=false,
@@ -80,12 +80,11 @@ struct GuidProp{R,R2,O,T,SM,SH,SP}
         SM, SH, SP, MLμ, HFc, Pν = init_solvers(params)
         # define a helper flag for accessors to H,F,c
         HFc_access_path = (
-            (convert_to_HFc && (lowercase(ode_type)==:mlμ) ) ?
+            (solver_choice.convert_to_HFc && (lowercase(ode_type)==:mlμ) ) ?
             :via_mlμ :
             :via_hfc
         )
-        T = Val{HFc_access_path}()
-        new{R,R2,O,T,SM,SH,SP}(P_target, P_aux, obs, MLμ, HFc, Pν)
+        new{R,R2,O,HFc_access_path,SM,SH,SP}(P_target, P_aux, obs, MLμ, HFc, Pν)
     end
 end
 
@@ -97,14 +96,11 @@ Initialise appropriate ODE solvers, according to how they are specified in
 ever called by hard-coded constructor of `GuidProp`.
 """
 function init_solvers(params)
+    sol, next_gp = params[4], params[5]
     # Using MLμ solver as a helper to a primary solver (of other type) used
     # on any other interval can be done only on the terminal interval.
-    @assert (
-        next_guiding_term===nothing ||
-        solver_choice.convert_to_HFc==false
-    )
+    @assert ( next_gp===nothing || sol.convert_to_HFc==false )
 
-    sol = params[4]
     ode_choice = lowercase(sol.ode_type)
     @assert ode_choice in [:hfc, :mlμ, :pν]
 
@@ -176,7 +172,7 @@ function init_xT_plus(
         ode_data_type
     )
     ode_data_type = ( ode_data_type===nothing ? Float64 : ode_data_type )
-    zeros(ode_data_type, dim_of_process) # finalise...
+    zeros(ode_data_type, size_of_HFc_solution(dim_of_process))
 end
 
 function init_xT_plus(
@@ -189,6 +185,17 @@ function init_xT_plus(
     zeros(ode_data_type, dim_of_process)
 end
 
+size_of_HFc_solution(d) = d^2+d+1
+size_of_HFc_buffer(d) = 4*d^2+d
+
 init_mlμ(::Any, args...) = nothing
 
 init_pν(::Any, args...) = nothing
+
+H(P::GuidProp{R,R2,O,:via_mlμ}, i) where {R,R2,O} = H(P.MLμ, i)
+F(P::GuidProp{R,R2,O,:via_mlμ}, i) where {R,R2,O} = F(P.MLμ, i)
+c(P::GuidProp{R,R2,O,:via_mlμ}, i) where {R,R2,O} = c(P.MLμ, i)
+
+H(P::GuidProp{R,R2,O,:via_hfc}, i) where {R,R2,O} = H(P.HFc, i)
+F(P::GuidProp{R,R2,O,:via_hfc}, i) where {R,R2,O} = F(P.HFc, i)
+c(P::GuidProp{R,R2,O,:via_hfc}, i) where {R,R2,O} = c(P.HFc, i)
