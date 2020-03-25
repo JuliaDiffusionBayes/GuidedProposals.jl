@@ -104,6 +104,7 @@ struct HFcSolver{Tp,Tsv,Tcb,T,K}
             saved_values;
             saveat=reverse(tt),
             tdir=-1,
+            save_everystep=false, # to prevent wasting memory allocations
         )
         sol = solve(prob, solver_type, callback=callback)
         HFc0 = sol.u[end]

@@ -46,7 +46,7 @@ using Test
 
 
 
-    params = (
+    params_intv1 = (
         tt = 0.0:0.01:1.0,
         P_target = nothing,
         P_aux = LVAux(2.0/3.0, 4.0/3.0, 1.0, 1.0, 0.2, 0.2),
@@ -64,14 +64,41 @@ using Test
             inplace=true,
             save_as_type=nothing,
             ode_data_type=nothing,
-        ),
-        next_guiding_term=nothing,
+        )
     )
 
-    gp = GuidProp(params...)
+    params_intv2 = (
+        tt = 1.0:0.01:2.0,
+        P_target = nothing,
+        P_aux = LVAux(2.0/3.0, 4.0/3.0, 1.0, 1.0, 0.2, 0.2),
+        obs = (
+            obs = [2.0, 3.0],
+            Σ = [1.0 0.0; 0.0 1.0],
+            Λ = [1.0 0.0; 0.0 1.0],
+            μ = [0.0, 0.0],
+            L = [1.0 0.0; 0.0 1.0],
+        ),
+        solver_choice=(
+            solver=Tsit5(),
+            ode_type=:HFc,
+            convert_to_HFc=false,
+            inplace=true,
+            save_as_type=nothing,
+            ode_data_type=nothing,
+        )
+    )
 
 
-    H(gp, 3)
-    F(gp, 10)
-    c(gp, 15)
+
+    gp2 = GuidProp(params_intv2..., nothing)
+    gp1 = GuidProp(params_intv1..., gp2)
+
+    H(gp2, 3)
+    F(gp2, 10)
+    c(gp2, 15)
+
+    H(gp1, 3)
+    F(gp1, 10)
+    c(gp1, 15)
+
 end

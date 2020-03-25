@@ -195,7 +195,9 @@ init_pν(::Any, args...) = nothing
 H(P::GuidProp{R,R2,O,:via_mlμ}, i) where {R,R2,O} = H(P.MLμ, i)
 F(P::GuidProp{R,R2,O,:via_mlμ}, i) where {R,R2,O} = F(P.MLμ, i)
 c(P::GuidProp{R,R2,O,:via_mlμ}, i) where {R,R2,O} = c(P.MLμ, i)
+HFc0(P::GuidProp{R,R2,O,:via_mlμ}) where {R,R2,O} = error("not implemented")
 
 H(P::GuidProp{R,R2,O,:via_hfc}, i) where {R,R2,O} = H(P.HFc, i)
 F(P::GuidProp{R,R2,O,:via_hfc}, i) where {R,R2,O} = F(P.HFc, i)
 c(P::GuidProp{R,R2,O,:via_hfc}, i) where {R,R2,O} = c(P.HFc, i)
+HFc0(P::GuidProp{R,R2,O,:via_hfc}) where {R,R2,O} = P.HFc.HFc0
