@@ -51,7 +51,7 @@ struct GuidProp{R,R2,O,T,S}
     P_target::R
     P_aux::R2
     obs::O
-    guiding_term::S
+    guiding_term_solver::S
 
     function GuidProp(
             tt,
@@ -75,11 +75,11 @@ struct GuidProp{R,R2,O,T,S}
             solver_choice,
             next_guiding_term,
         )
-        S, guiding_term = init_solvers(params)
+        S, guiding_term_solver = init_solvers(params)
         # a helper flag
         T = lowercase(solver_choice.ode_type)
 
-        new{R,R2,O,T,S}(P_target, P_aux, obs, guiding_term)
+        new{R,R2,O,T,S}(P_target, P_aux, obs, guiding_term_solver)
     end
 end
 
@@ -99,12 +99,12 @@ function init_solvers(params)
     ode_choice = lowercase(sol.ode_type)
     @assert ode_choice in [:hfc, :mlμ, :pν]
 
-    guiding_term = init_solver(
+    guiding_term_solver = init_solver(
         Val{ode_choice}(),
         Val{sol.convert_to_HFc}(),
         params...
     )
-    typeof(guiding_term), guiding_term
+    typeof(guiding_term_solver), guiding_term_solver
 end
 
 """
@@ -142,7 +142,7 @@ function init_solver(::Val{:hfc}, ::Any, tt, P_aux, obs, choice, next_guiding_te
     )
 end
 
-HFc0(P::GuidProp) = HFc0(P.guiding_term)
+HFc0(P::GuidProp) = HFc0(P.guiding_term_solver)
 
 function init_xT_plus(
         ::Val{:hfc},
@@ -160,6 +160,6 @@ init_solver(::Val{:mlμ}, args...) = nothing
 
 init_solver(::Val{:Pν}, args...) = nothing
 
-H(P::GuidProp, i) = H(P.guiding_term, i)
-F(P::GuidProp, i) = F(P.guiding_term, i)
-c(P::GuidProp, i) = c(P.guiding_term, i)
+H(P::GuidProp, i) = H(P.guiding_term_solver, i)
+F(P::GuidProp, i) = F(P.guiding_term_solver, i)
+c(P::GuidProp, i) = c(P.guiding_term_solver, i)

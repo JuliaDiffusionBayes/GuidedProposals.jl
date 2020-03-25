@@ -1,16 +1,18 @@
 using GuidedProposals, OrdinaryDiffEq, StaticArrays
+using ForwardDiff # remember to remove ForwardDiff from dependencies
 using Test
 
 @testset "GuidedProposals.jl" begin
     # Write your own tests here.
 
-    struct LVAux
-        α::Float64
-        β::Float64
-        γ::Float64
-        δ::Float64
-        σ1::Float64
-        σ2::Float64
+    struct LVAux{T}
+        α::T
+        β::T
+        γ::T
+        δ::T
+        σ1::T
+        σ2::T
+        LVAux(α::T,β,γ,δ,σ1,σ2) where T = new{T}(α,β,γ,δ,σ1,σ2)
     end
 
     function GuidedProposals.B!(save_to, t, P::LVAux)
@@ -169,5 +171,34 @@ using Test
     H(gp1, 3)
     F(gp1, 10)
     c(gp1, 15)
+
+    function foo(θ)
+        params_intv2 = (
+            tt = 1.0:0.01:2.0,
+            P_target = nothing,
+            P_aux = LVAux(θ...),
+            obs = (
+                obs = [2.0, 3.0],
+                Σ = [1.0 0.0; 0.0 1.0],
+                Λ = [1.0 0.0; 0.0 1.0],
+                μ = [0.0, 0.0],
+                L = [1.0 0.0; 0.0 1.0],
+            ),
+            solver_choice=(
+                solver=Tsit5(),
+                ode_type=:HFc,
+                convert_to_HFc=false,
+                inplace=false,
+                save_as_type=(Matrix{eltype(θ)}, Vector{eltype(θ)}, eltype(θ)),
+                ode_data_type=eltype(θ),
+            )
+        )
+
+        gp2 = GuidProp(params_intv2..., nothing)
+
+        sum(gp2.guiding_term_solver.HFc0)
+    end
+
+    grad = ForwardDiff.gradient(foo, [2.0/3.0, 4.0/3.0, 1.0, 1.0, 0.2, 0.2])
 
 end
