@@ -4,11 +4,15 @@
 #              that defines a sampler for conditioned diffusions               #
 #                                                                              #
 #==============================================================================#
-
-# allow for a switch between MLμ and other solvers only at the terminal
-# observation
 """
-    GuidProp{R,R2,O,T,S}
+    struct GuidProp{
+            K,DP,DW,SS,R,R2,O,S,T
+            } <: DiffusionDefinition.DiffusionProcess{K,DP,DW,SS}
+        P_target::R
+        P_aux::R2
+        obs::O
+        guiding_term_solver::S
+    end
 
 Struct defining `guided proposals` of M Schauer, F van der Meulen and H van
 Zanten. See Mider M, Schauer M and van der Meulen F `Continuous-discrete
@@ -17,37 +21,45 @@ behind this object. It computes and stores the guiding term `∇logρ` and allow
 for simulation of guided proposals and computation of their likelihood.
 
         GuidProp(
-            tt,
-            P_target::R,
-            P_aux::R2,
-            obs::O,
-            solver_choice=(
-                solver=:Tsit5,
-                ode_type=:HFc,
-                convert_to_HFc=false,
-                inplace=false,
-                save_as_type=nothing,
-                ode_data_type=nothing,
-            ),
-            next_guiding_term=nothing
-        ) where {R,R2,O}
+                tt,
+                P_target::R,
+                P_aux::R2,
+                obs::O,
+                solver_choice=(
+                    solver=Tsit5(),
+                    ode_type=:HFc,
+                    convert_to_HFc=false,
+                    mode=:inplace,
+                    gradients=false,
+                    eltype=Float64,
+                ),
+                next_guiding_term=nothing
+            ) where {R,R2,O}
 
     Default constructor. `P_target` and `P_aux` are the target and auxiliary
     diffusion laws respectively. `tt` is the time-grid on which `∇logρ` needs
     to be computed. `obs` is the terminal observation (and the only one on the
     interval (`tt[1]`, `tt[end]`]). `solver_choice` specifies the type of ODE
-    solver that is to be used for computations of `∇logρ` (it is a `NamedTuple`,
-    with `solver` specifying the ODE solver, `ode_type` picking the ODE system
-    (between :HFc, :MLμ and :Pν), `convert_to_HFc` indicating whether to
-    translate the results of M,L,μ solver to H,F,c objects, `inplace` is a flag
-    for whether to use in-place ODE solvers (for which B!, β!, σ! and a!
-    functions need to be defined for the auxiliary diffusion), `save_as_type`
-    specifies the datatypes in which the terms computed for `∇logρ` are to be
-    saved and `ode_data_type` specifies the data type used for internal
-    computations of ODE solvers). Finally, `next_guiding_term` is the guided
-    proposal for the subsequent inter-observation interval.
+    solver that is to be used for computations of `∇logρ`
+        ( it is a `NamedTuple`, where `solver` specifies the algorithm for
+        solving ODEs (see the documentation of DifferentialEquations.jl for
+        possible choices), `ode_type` picks the ODE system (between :HFc, :MLμ
+        and :Pν), `convert_to_HFc` indicates whether to translate the results of
+        M,L,μ solver to H,F,c objects, `mode` is a flag indicating the way in
+        which data is being handled:
+        - `:inplace`: uses regular arrays to store the data (requires functions
+                      B!, β!, σ! and a! to be defined)
+        - `:outofplace`: operates on static arrays
+        - `:gpu`: operates on GPU arrays [TODO not implemented yet]
+        `gradients` is a flag indicating whether automatic differentiation is to
+        be employed and `eltype` indicates the data-type of each container's
+        member. )
+    Finally, `next_guiding_term` is the guided proposal for the subsequent
+    inter-observation interval.
 """
-struct GuidProp{R,R2,O,T,S}
+struct GuidProp{
+        K,DP,DW,SS,R,R2,O,S,T
+        } <: DiffusionDefinition.DiffusionProcess{K,DP,DW,SS}
     P_target::R
     P_aux::R2
     obs::O
@@ -62,104 +74,237 @@ struct GuidProp{R,R2,O,T,S}
                 solver=Tsit5(),
                 ode_type=:HFc,
                 convert_to_HFc=false,
-                inplace=false,
-                save_as_type=nothing,
-                ode_data_type=nothing,
+                mode=:inplace,
+                gradients=false,
+                eltype=Float64,
             ),
             next_guiding_term=nothing
         ) where {R,R2,O}
+
+        choices_now, choices_to_pass_on = reformat(
+            solver_choice,
+            next_guiding_term===nothing,
+            P_aux,
+        )
+
         params = (
             collect(tt),
             P_aux,
             obs,
-            solver_choice,
+            Val{choices_now.mode}(),
+            choices_to_pass_on,
             next_guiding_term,
         )
-        S, guiding_term_solver = init_solvers(params)
-        # a helper flag
-        T = lowercase(solver_choice.ode_type)
+        guiding_term_solver = init_solver(
+            Val{choices_now.ode_type}(),
+            Val{choices_now.convert_to_HFc}(),
+            params...
+        )
+        S = typeof(guiding_term_solver)
+        T = choices_now.ode_type
 
-        new{R,R2,O,T,S}(P_target, P_aux, obs, guiding_term_solver)
+        DP, DW = DD.dimension(P_target)
+        K, SS = eltype(P_target), DD.state_space(P_target)
+
+        new{K,DP,DW,SS,R,R2,O,S,T}(P_target, P_aux, obs, guiding_term_solver)
     end
 end
 
 """
-    init_solvers(params)
+    reformat(solver_choice::NamedTuple, last_interval::Bool, P_aux)
 
-Initialise appropriate ODE solvers, according to how they are specified in
-`params`. Validity of the format of `params` is not checked, because it is only
-ever called by hard-coded constructor of `GuidProp`.
+Re-format the `solver_choice` by splitting it into two NamedTuples and
+populating any missing entries with defaults. `P_aux` is the law of the
+auxiliary diffusion that is needed in case a flag for computing gradients is
+turned on.
 """
-function init_solvers(params)
-    sol, next_gp = params[4], params[5]
-    # Using MLμ solver as a helper to a primary solver (of other type) used
-    # on any other interval can be done only on the terminal interval.
-    @assert ( next_gp===nothing || sol.convert_to_HFc==false )
-
-    ode_choice = lowercase(sol.ode_type)
-    @assert ode_choice in [:hfc, :mlμ, :pν]
-
-    guiding_term_solver = init_solver(
-        Val{ode_choice}(),
-        Val{sol.convert_to_HFc}(),
-        params...
+function reformat(solver_choice::NamedTuple, last_interval::Bool, P_aux)
+    # `get_or_default` is defined in `utility_functions.jl`
+    choices_needed_later = (
+        solver = get_or_default(solver_choice, :solver, Tsit5()),
+        eltype = fetch_eltype(solver_choice, P_aux),
     )
-    typeof(guiding_term_solver), guiding_term_solver
+    choices_needed_now = (
+        ode_type = lowercase(get_or_default(solver_choice, :ode_type, :HFc)),
+        mode = lowercase(get_or_default(solver_choice, :mode, :inplace)),
+        gradients = get_or_default(solver_choice, :gradients, false),
+        convert_to_HFc = get_or_default(solver_choice, :convert_to_HFc, false),
+    )
+    # Using MLμ solver as a helper for deriving H,F,c can be done only on the
+    # terminal interval.
+    @assert ( last_interval || choices_needed_now.convert_to_HFc==false)
+    @assert choices_needed_now.ode_type in [:hfc, :mlμ, :pν]
+    @assert choices_needed_now.mode in [:inplace,:outofplace,:gpu]
+    @assert typeof(choices_needed_later.eltype) <: DataType
+
+    choices_needed_now, choices_needed_later
 end
 
 """
-    init_solver(::Val{:hfc}, ::Any, tt, P_aux, obs, choice, next_guiding_term)
+    fetch_eltype(choices, P)
+
+Determine the type of the elements that is supposed to be used by the internal
+containers of this package. If `choice.gradients` flag is turned on, then
+use the same type as the eltypes of the parameters in the auxiliary law.
+Otherwise, use the type specified in `choice`. If neither the `choice.gradients`
+flag is on, nor a default is provided, use Float64.
+"""
+function fetch_eltype(choices, P)
+    (
+        (haskey(choices, :gradients) && choices.gradients) ?
+        eltype(P) :
+        get_or_default(choices, :eltype, Float64)
+    )
+end
+
+
+"""
+    init_solver(
+        ::Val{:hfc},
+        ::Any,
+        tt,
+        P_aux,
+        obs,
+        mode::Val,
+        choices,
+        next_guiding_term
+    )
 
 Initialise ODE solver for H,F,c, preallocate space and solve it once. `tt` is
 the time-grid on which `∇logρ` is to be saved. `P_aux` is the auxiliary law,
-`obs` is the terminal observation, `choice` is the `NamedTuple` with various
-choices for the the ODE solver (here, the ones used are: `solver`---the type of
-ODE solver, `inplace`---whether to perform computations in-place,
-`save_as_type`---the datatypes in which H,F,c are to be solved (if set to
-`nothing`, then Matrix{Float64}, Vector{Float64} and Float64 are used by default
-for storing H, F and c respectively), `ode_data_type`---the datatypes in which
-the ODE solvers should store all the data (if set to `nothing`, then
-Vector{Float64} is used by default)). Finally, `next_guiding_term` is the guided
-proposal used on the subsequent inter-observation interval.
+`obs` is the terminal observation, `mode` is for differentiating between
+in-place, out-of-place and gpu constructors for the guiding term solver,
+`choices` contains additional information that is passed on (and which is about
+eltype and a chosen algorithm for the ODE solvers) and finally,
+`next_guiding_term` is the guided proposal used on the subsequent
+inter-observation interval.
 """
-function init_solver(::Val{:hfc}, ::Any, tt, P_aux, obs, choice, next_guiding_term)
-    d = dimension(P_aux).process
-    inplace = Val{choice.inplace ? :inplace : :outofplace}()
-    xT_plus = (
-        next_guiding_term===nothing ?
-        init_xT_plus(Val{:hfc}(), d, choice.ode_data_type) :
-        HFc0(next_guiding_term)
+function init_solver(
+        ::Val{:hfc},
+        ::Any,
+        tt,
+        P_aux,
+        obs,
+        mode::Val,
+        choices,
+        next_guiding_term
+    )
+
+    xT_plus = fetch_xT_plus(
+        mode,
+        next_guiding_term,
+        choices.eltype,
+        DD.dimension(P_aux).process
     )
 
     HFcSolver(
-        inplace,
+        mode,
         tt,
         xT_plus,
         P_aux,
         obs,
-        choice.solver,
-        choice.save_as_type
+        choices,
     )
 end
 
-HFc0(P::GuidProp) = HFc0(P.guiding_term_solver)
+"""
+    fetch_xT_plus(::Val{:inplace}, next_guiding_term, el, dim_of_proc)
 
-function init_xT_plus(
-        ::Val{:hfc},
-        dim_of_process,
-        ode_data_type
+If this is not the last inter-observation interval, fetch the data containing
+H,F,c computed for the left time-limit of the subsequent interval. Otherwise,
+instantiate a zero-term.
+"""
+function fetch_xT_plus end
+
+#TODO switch to using buffers for this step
+function fetch_xT_plus(::Val{:inplace}, next_guiding_term, el, dim_of_proc)
+    (
+        next_guiding_term===nothing ?
+        HFcContainer{el}(dim_of_proc) :
+        HFc0(next_guiding_term)
     )
-    ode_data_type = ( ode_data_type===nothing ? Float64 : ode_data_type )
-    zeros(ode_data_type, size_of_HFc_solution(dim_of_process))
 end
 
+function fetch_xT_plus(::Val{:outofplace}, next_guiding_term, el, dim_of_proc)
+    (
+        next_guiding_term===nothing ?
+        zero(SVector{size_of_HFc_solution(dim_of_proc),el}) :
+        HFc0(next_guiding_term)
+    )
+end
+
+"""
+    size_of_HFc_solution(d)
+
+Compute the size of a vector containing H,F,c elements
+"""
 size_of_HFc_solution(d) = d^2+d+1
+
+"""
+    size_of_HFc_solution(d)
+
+Length of a vector containing temporary data needed for in-place solver of
+H,F,c, when the underlying process has dimension `d`.
+"""
 size_of_HFc_buffer(d) = 4*d^2+d
 
+#TODO
 init_solver(::Val{:mlμ}, args...) = nothing
 
+#TODO
 init_solver(::Val{:Pν}, args...) = nothing
 
+"""
+    HFc0(P::GuidProp)
+
+Return the container with data that can be used to reconstruct H,F,c evaluated
+at time 0+ for the guided proposal `P`.
+"""
+HFc0(P::GuidProp) = HFc0(P.guiding_term_solver)
+
+"""
+    H(P::GuidProp, i)
+
+Return saved matrix H[i] (with H[1] indicating H at time 0+ and H[end]
+indicating H at time T).
+"""
 H(P::GuidProp, i) = H(P.guiding_term_solver, i)
+
+"""
+    F(P::GuidProp, i)
+
+Return saved vector F[i] (with F[1] indicating F at time 0+ and F[end]
+indicating F at time T).
+"""
 F(P::GuidProp, i) = F(P.guiding_term_solver, i)
+
+"""
+    c(P::GuidProp, i)
+
+Return saved scalar c[i] (with c[1] indicating c at time 0+ and c[end]
+indicating c at time T).
+"""
 c(P::GuidProp, i) = c(P.guiding_term_solver, i)
+
+"""
+    Base.time(P::GuidProp, i)
+
+Return time-point tt[i] corresponding to a saved state of ODEs (with tt[1]
+indicating time 0+ and tt[end] indicating time T).
+"""
+Base.time(P::GuidProp, i) = P.guiding_term_solver.saved_values.t[end-i+1]
+
+
+dimension(P::GuidProp) = dimension(P.P_target)
+
+mode(P::GuidProp) =  mode(P.guiding_term_solver)
+
+function recompute_guiding_term(P::GuidProp, next_guiding_term=nothing)
+    xT_plus = fetch_xT_plus(
+        Val{mode(P)}(),
+        next_guiding_term,
+        eltype(HFc0(P)),
+        dimension(P).process
+    )
+    recompute_guiding_term(P.guiding_term_solver, P.P_aux, P.obs, xT_plus)
+end
