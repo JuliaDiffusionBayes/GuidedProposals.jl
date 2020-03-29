@@ -7,58 +7,45 @@ const GP = GuidedProposals
 
 @testset "GuidedProposals.jl" begin
     # Write your own tests here.
+    @load_diffusion LotkaVolterraAux
 
-    struct LVAux{T}
-        α::T
-        β::T
-        γ::T
-        δ::T
-        σ1::T
-        σ2::T
-        LVAux(α::T,β,γ,δ,σ1,σ2) where T = new{T}(α,β,γ,δ,σ1,σ2)
-    end
-
-    function DD.B!(save_to, t, P::LVAux)
+    function DD.B!(save_to, t, P::LotkaVolterraAux)
         save_to[1,1] = 0.0
         save_to[1,2] = -P.β * P.γ/P.δ
         save_to[2,1] = P.α * P.δ/P.β
         save_to[2,2] = 0.0
     end
 
-    function DD.β!(save_to, t, P::LVAux)
+    function DD.β!(save_to, t, P::LotkaVolterraAux)
         save_to[1] = P.δ*P.α/P.δ
         save_to[2] = -P.α*P.γ/P.β
     end
 
-    function DD.σ!(save_to, t, P::LVAux)
+    function DD.σ!(save_to, t, P::LotkaVolterraAux)
         save_to[1,1] = P.σ1
         save_to[1,2] = 0.0
         save_to[2,1] = 0.0
         save_to[2,2] = P.σ2
     end
 
-    function DD.a!(save_to, t, P::LVAux)
+    function DD.a!(save_to, t, P::LotkaVolterraAux)
         save_to[1,1] = P.σ1^2
         save_to[1,2] = 0.0
         save_to[2,1] = 0.0
         save_to[2,2] = P.σ2^2
     end
 
-    DD.dimension(::LVAux) = (
-        process = 2,
-        wiener = 2,
+    Base.eltype(::LotkaVolterraAux{T}) where T = T
+
+    P = LotkaVolterraAux(
+        2.0/3.0, 4.0/3.0, 1.0, 1.0, 0.2, 0.2, 0.0,0.0, nothing, nothing
     )
-
-    DD.state_space(::LVAux) = UnboundedStateSpace()
-
-    Base.eltype(::LVAux{T}) where T = T
-
 
 
     params_intv1 = (
         tt = 0.0:0.01:1.0,
-        P_target = LVAux(2.0/3.0, 4.0/3.0, 1.0, 1.0, 0.2, 0.2),
-        P_aux = LVAux(2.0/3.0, 4.0/3.0, 1.0, 1.0, 0.2, 0.2),
+        P_target = P,
+        P_aux = P,
         obs = (
             obs = [1.0, 2.0],
             Σ = [1.0 0.0; 0.0 1.0],
@@ -78,8 +65,8 @@ const GP = GuidedProposals
 
     params_intv2 = (
         tt = 1.0:0.01:2.0,
-        P_target = LVAux(2.0/3.0, 4.0/3.0, 1.0, 1.0, 0.2, 0.2),
-        P_aux = LVAux(2.0/3.0, 4.0/3.0, 1.0, 1.0, 0.2, 0.2),
+        P_target = P,
+        P_aux = P,
         obs = (
             obs = [2.0, 3.0],
             Σ = [1.0 0.0; 0.0 1.0],
@@ -108,28 +95,10 @@ const GP = GuidedProposals
     F(gp1, 10)
     c(gp1, 15)
 
-
-    DD.B(t, P::LVAux) = @SMatrix [
-        0.0   (-P.β * P.γ/P.δ);
-        (P.α * P.δ/P.β)  0.0
-    ]
-
-    DD.β(t, P::LVAux) = @SVector [P.δ*P.α/P.δ, -P.α*P.γ/P.β]
-
-    DD.σ(t, P::LVAux) = @SMatrix [
-        P.σ1 0.0;
-        0.0 P.σ2
-    ]
-
-    DD.a(t, P::LVAux) = @SMatrix [
-        P.σ1^2 0.0;
-        0.0 P.σ2^2
-    ]
-
     params_intv1 = (
         tt = 0.0:0.01:1.0,
-        P_target = LVAux(2.0/3.0, 4.0/3.0, 1.0, 1.0, 0.2, 0.2),
-        P_aux = LVAux(2.0/3.0, 4.0/3.0, 1.0, 1.0, 0.2, 0.2),
+        P_target = P,
+        P_aux = P,
         obs = (
             obs = [1.0, 2.0],
             Σ = [1.0 0.0; 0.0 1.0],
@@ -149,8 +118,8 @@ const GP = GuidedProposals
 
     params_intv2 = (
         tt = 1.0:0.01:2.0,
-        P_target = LVAux(2.0/3.0, 4.0/3.0, 1.0, 1.0, 0.2, 0.2),
-        P_aux = LVAux(2.0/3.0, 4.0/3.0, 1.0, 1.0, 0.2, 0.2),
+        P_target = P,
+        P_aux = P,
         obs = (
             obs = [2.0, 3.0],
             Σ = [1.0 0.0; 0.0 1.0],
@@ -178,12 +147,16 @@ const GP = GuidedProposals
     H(gp1, 3)
     F(gp1, 10)
     c(gp1, 15)
+
+
+    # in DiffusionDefinition it asserts Float64 eltype, change it there
+    DD.β(t, P::LotkaVolterraAux) = @SVector [P.γ/P.δ*P.α, -P.α/P.β*P.γ]
 
     function foo(θ)
         params_intv2 = (
             tt = 1.0:0.01:2.0,
-            P_target = LVAux(θ...),
-            P_aux = LVAux(θ...),
+            P_target = LotkaVolterraAux(θ..., 0.0,0.0, nothing, nothing),
+            P_aux = LotkaVolterraAux(θ..., 0.0,0.0, nothing, nothing),
             obs = (
                 obs = [2.0, 3.0],
                 Σ = [1.0 0.0; 0.0 1.0],

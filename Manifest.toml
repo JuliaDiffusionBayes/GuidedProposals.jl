@@ -47,9 +47,9 @@ version = "3.8.0"
 
 [[CompilerSupportLibraries_jll]]
 deps = ["Libdl", "Pkg"]
-git-tree-sha1 = "067567a322fe466c5ec8d01413eee7127bd11699"
+git-tree-sha1 = "ff8101d6736414bc93c0f8df77b1e4095ca988c3"
 uuid = "e66e0078-7015-5450-92f7-15fbd957f2ae"
-version = "0.3.1+0"
+version = "0.3.2+0"
 
 [[ConsoleProgressMonitor]]
 deps = ["Logging", "ProgressMeter"]
@@ -107,9 +107,7 @@ version = "1.0.1"
 
 [[DiffusionDefinition]]
 deps = ["LinearAlgebra", "MacroTools", "Random", "Reexport", "StaticArrays", "Trajectories"]
-git-tree-sha1 = "be56cb30f0c3e0f4eb8c7f522dfef99040d434c3"
-repo-rev = "master"
-repo-url = "https://github.com/diffusionbayes/DiffusionDefinition.jl"
+path = "/home/rabid-koala/Documents/projects/DiffusionDefinition"
 uuid = "c126fcb9-5a08-4fee-b75a-97eb446288b0"
 version = "0.1.0"
 
@@ -143,9 +141,9 @@ version = "2.3.0"
 
 [[ForwardDiff]]
 deps = ["CommonSubexpressions", "DiffResults", "DiffRules", "NaNMath", "Random", "SpecialFunctions", "StaticArrays"]
-git-tree-sha1 = "88b082d492be6b63f967b6c96b352e25ced1a34c"
+git-tree-sha1 = "869540e4367122fbffaace383a5bdc34d6e5e5ac"
 uuid = "f6369f11-7733-5829-9624-2563aa707210"
-version = "0.10.9"
+version = "0.10.10"
 
 [[FunctionWrappers]]
 git-tree-sha1 = "e4813d187be8c7b993cb7f85cbf2b7bfbaadc694"
