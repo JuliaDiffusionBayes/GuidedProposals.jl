@@ -109,7 +109,7 @@ version = "1.0.1"
 deps = ["LinearAlgebra", "MacroTools", "Random", "Reexport", "StaticArrays", "Trajectories"]
 git-tree-sha1 = "be56cb30f0c3e0f4eb8c7f522dfef99040d434c3"
 repo-rev = "master"
-repo-url = "https://github.com/diffusionbayes/DiffusionDefinition.jl"
+repo-url = "https://github.com/JuliaDiffusionBayes/DiffusionDefinition.jl"
 uuid = "c126fcb9-5a08-4fee-b75a-97eb446288b0"
 version = "0.1.0"
 
