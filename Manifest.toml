@@ -107,7 +107,8 @@ version = "1.0.1"
 
 [[DiffusionDefinition]]
 deps = ["LinearAlgebra", "MacroTools", "Random", "Reexport", "StaticArrays", "Trajectories"]
-path = "/home/rabid-koala/Documents/projects/DiffusionDefinition"
+repo-rev = "master"
+repo-url = "https://github.com/JuliaDiffusionBayes/DiffusionDefinition.jl/tree/early_improvements"
 uuid = "c126fcb9-5a08-4fee-b75a-97eb446288b0"
 version = "0.1.0"
 
