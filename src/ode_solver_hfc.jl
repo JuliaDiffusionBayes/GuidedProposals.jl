@@ -256,7 +256,7 @@ function recompute_guiding_term(
         obs,
         xT_plus
     )
-    update_HFc!(s.HFcT, xT_plus, obs)
+    update_HFc!(s.problem_setup.HFcT, xT_plus, obs)
     prob = ODEProblem(s.problem_setup...)
     sol = solve(prob, s.solver, callback=s.callback)
     s.HFc0 .= sol.u[end]
@@ -275,4 +275,15 @@ function recompute_guiding_term(
     )
     sol = solve(prob, s.solver, callback=s.callback)
     s.HFc0 .= sol.u[end]
+end
+
+
+∇logρ(i, x, P::HFcSolver{:outofplace}) = F(P, i) - H(P, i)*x
+
+function ∇logρ!(buffer, i, x, P::HFcSolver{:inplace})
+    mul!(buffer.∇logρ, H(P, i), x, -true, false)
+    _F = F(P, i)
+    for j in 1:length(buffer.∇logρ)
+        buffer.∇logρ[j] += _F[j]
+    end
 end

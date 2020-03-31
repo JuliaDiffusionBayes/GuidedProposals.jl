@@ -1,6 +1,6 @@
 using GuidedProposals, DiffusionDefinition
 using OrdinaryDiffEq, StaticArrays
-using ForwardDiff
+using ForwardDiff, Random
 using Test
 const DD = DiffusionDefinition
 const GP = GuidedProposals
@@ -87,6 +87,9 @@ const GP = GuidedProposals
     gp2 = GuidProp(params_intv2..., nothing)
     gp1 = GuidProp(params_intv1..., gp2)
 
+    recompute_guiding_term(gp2, nothing)
+    recompute_guiding_term(gp1, gp2)
+
     H(gp2, 3)
     F(gp2, 10)
     c(gp2, 15)
@@ -140,6 +143,9 @@ const GP = GuidedProposals
     gp2 = GuidProp(params_intv2..., nothing)
     gp1 = GuidProp(params_intv1..., gp2)
 
+    recompute_guiding_term(gp2, nothing)
+    recompute_guiding_term(gp1, gp2)
+
     H(gp2, 3)
     F(gp2, 10)
     c(gp2, 15)
@@ -148,6 +154,21 @@ const GP = GuidedProposals
     F(gp1, 10)
     c(gp1, 15)
 
+    N = 2
+    tt = reverse(gp2.guiding_term_solver.saved_values.t)
+    WW = trajectory(tt, SVector{N,Float64})
+    wr = Wiener()
+    rand!(WW, wr)
+
+    XX = trajectory(tt, SVector{N,Float64})
+    x0 = @SVector [1.0, 2.0]
+    DD.solve!(XX, WW, gp2, x0)
+
+    #[TODO move to diffusionDefinition]
+    #@inline DD.constdiff(P::LotkaVolterraAux) = true
+
+    loglikelihood(XX, gp2)
+    loglikelihood_obs(gp2, x0)
 
     # in DiffusionDefinition it asserts Float64 eltype, change it there
     DD.β(t, P::LotkaVolterraAux) = @SVector [P.γ/P.δ*P.α, -P.α/P.β*P.γ]
@@ -175,6 +196,7 @@ const GP = GuidedProposals
         )
 
         gp2 = GuidProp(params_intv2..., nothing)
+        recompute_guiding_term(gp2, nothing)
 
         sum(gp2.guiding_term_solver.HFc0)
     end

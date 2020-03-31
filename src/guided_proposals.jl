@@ -294,8 +294,11 @@ indicating time 0+ and tt[end] indicating time T).
 """
 Base.time(P::GuidProp, i) = P.guiding_term_solver.saved_values.t[end-i+1]
 
+DD.dimension(P::GuidProp) = DD.dimension(P.P_target)
 
-dimension(P::GuidProp) = dimension(P.P_target)
+abstract type IntegrationRule end
+
+struct LeftRule <: IntegrationRule end
 
 mode(P::GuidProp) =  mode(P.guiding_term_solver)
 
@@ -304,7 +307,111 @@ function recompute_guiding_term(P::GuidProp, next_guiding_term=nothing)
         Val{mode(P)}(),
         next_guiding_term,
         eltype(HFc0(P)),
-        dimension(P).process
+        DD.dimension(P).process
     )
     recompute_guiding_term(P.guiding_term_solver, P.P_aux, P.obs, xT_plus)
+end
+
+DD.constdiff(P::GuidProp) = DD.constdiff(P.P_target) && DD.constdiff(P.P_aux)
+
+
+DD._σ((t,i)::DD.IndexedTime, x, P::GuidProp) = DD.σ((t,i), x, P.P_target)
+
+
+DD._b((t, i)::DD.IndexedTime, x, P::GuidProp) = (
+    DD.b(t, x, P.P_target)
+    + DD.a(t, x, P.P_target) * ∇logρ(i, x, P)
+)
+
+function DD._b!(buffer, (t, i)::DD.IndexedTime, x, P::GuidProp)
+    DD.b!(buffer.b, t, x, P.P_target)
+    DD.a!(buffer.a, t, x, P.P_target)
+    ∇logρ!(buffer, i, x, P)
+    mul!(buffer.b, buffer.a, buffer.∇logρ, true, true)
+end
+
+∇logρ(i::Integer, x, P::GuidProp) = ∇logρ(i, x, P.guiding_term_solver)
+
+
+function loglikelihood(X::Trajectory, P::GuidProp; skip=0)
+    loglikelihood(LeftRule(), X, P, P.guiding_term_solver; skip=skip)
+end
+
+function loglikelihood(ir::IntegrationRule, X::Trajectory, P::GuidProp; skip=0)
+    loglikelihood(ir, X, P, P.guiding_term_solver; skip=skip)
+end
+
+function loglikelihood(
+        ::LeftRule,
+        X::Trajectory,
+        P::GuidProp,
+        ::AbstractGuidingTermSolver{:outofplace};
+        skip=0
+    )
+    tt, xx = X.t, X.x
+    ll = 0.0
+    N = length(tt)-1-skip
+
+    for i in 1:N
+        x, s, dt = xx[i], tt[i], tt[i+1]-tt[i]
+        r_i = ∇logρ(i, x, P)
+        b_i = DD.b(s, x, P.P_target)
+        btil_i = DD.b(s, x, P.P_aux)
+
+        ll += dot(b_i-btil_i, r_i) * dt
+
+        if !DD.constdiff(P)
+            H_i = H(i, x, P)
+            a_i = DD.a(s, x, P.P_target)
+            atil_i = DD.a(s, x, P.P_aux)
+            ll -= 0.5*sum( (a_i - atil_i).*H_i ) * dt
+            ll += 0.5*( r_i'*(a_i - atil_i)*r_i ) * dt
+        end
+    end
+    ll
+end
+
+# NOTE worry about this later...
+function loglikelihood(
+        ::LeftRule,
+        X::Trajectory,
+        P::GuidProp,
+        ::AbstractGuidingTermSolver{:inplace};
+        skip=0
+    )
+    tt, xx = X.t, x.x
+    ll = 0.0
+    N = length(tt)-1-skip
+
+    for i in 1:N
+        x, s, dt = xx[i], tt[i], tt[i+1]-tt[i]
+        ∇logρ!(P.buffer.r_i, i, x, P)
+        DD.b(P.buffer.b_i, s, x, P.P_target)
+        DD.b(s.buffer.btil_i, x, P.P_aux)
+        for j in 1:length(P.buffer.b_i)
+            P.buffer.b_i[j] -= P.buffer.btil_i[j]
+        end
+
+        ll += dot(P.buffer.b_i, P.buffer.r_i) * dt
+
+        if !DD.constdiff(P)
+            H_i = H(i, x, P)
+            DD.a(P.buffer.a_i, s, x, P.P_target)
+            DD.a(P.buffer.atil_i, s, x, P.P_aux)
+            ll -= 0.5*sum( (a_i - atil_i).*H_i ) * dt
+            ll += 0.5*( r_i'*(a_i - atil_i)*r_i ) * dt
+        end
+    end
+    ll
+end
+
+loglikelihood_obs(P::GuidProp, x0) = loglikelihood_obs(P, x0, P.guiding_term_solver)
+
+function loglikelihood_obs(P::GuidProp, x0, ::AbstractGuidingTermSolver{:outofplace})
+    - 0.5 * ( x0'*H(P, 1)*x0 - 2.0*dot(F(P, 1), x0) ) - c(P, 1)
+end
+
+# worry about it later
+function loglikelihood_obs(P::GuidProp, x0, ::AbstractGuidingTermSolver{:inplace})
+    - 0.5 * ( x0'*H(P, 1)*x0 - 2.0*dot(F(P, 1), x₀) ) - c(P, 1)
 end
