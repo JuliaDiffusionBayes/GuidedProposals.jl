@@ -78,15 +78,15 @@ struct HFcSolver{Tmode,Tsv,Ti,TT,T0,Ta} <: AbstractGuidingTermSolver{Tmode}
             # ---
             # dH = - (_B' * H) - (H * _B) + outer(H * σ)
             mul!(tmat, H, a)
-            mul!(dH, tmat, tmat')
+            mul!(dH, tmat, H')
             mul!(dH, H, B, -true, true)
             mul!(dH, B', H, -true, true)
             # dF = - (_B' * F) + (H * a * F) + (H * _β)
             mul!(dF, tmat, F)
             mul!(dF, B', F, -true, true)
             mul!(dF, H, β, true, true)
-            # dc = dot(_β, F) + 0.5*outer(F' * _σ) + 0.5*sum(H .* _a)
-            dc[1] = 0.5*tr(tmat)
+            # dc = dot(_β, F) + 0.5*outer(F' * _σ) - 0.5*sum(H .* _a)
+            dc[1] = -0.5*tr(tmat)
             mul!(tvec', F', a)
             mul!(dc, tvec', F, 0.5, true)
             mul!(dc, β', F, true, true)
@@ -142,7 +142,7 @@ struct HFcSolver{Tmode,Tsv,Ti,TT,T0,Ta} <: AbstractGuidingTermSolver{Tmode}
 
             dH = - (_B' * H) - (H * _B) + outer(H * _σ)
             dF = - (_B' * F) + (H * _a * F) + (H * _β)
-            dc = dot(_β, F) + 0.5*outer(F' * _σ) + 0.5*sum(H .* _a)
+            dc = dot(_β, F) + 0.5*outer(F' * _σ) - 0.5*sum(H .* _a)
             vcat(SVector(dH), dF, SVector(dc))
         end
 

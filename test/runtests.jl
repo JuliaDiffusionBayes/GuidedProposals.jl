@@ -41,7 +41,6 @@ const GP = GuidedProposals
         2.0/3.0, 4.0/3.0, 1.0, 1.0, 0.2, 0.2, 0.0,0.0, nothing, nothing
     )
 
-
     params_intv1 = (
         tt = 0.0:0.01:1.0,
         P_target = P,
@@ -164,7 +163,7 @@ const GP = GuidedProposals
     x0 = @SVector [1.0, 2.0]
     DD.solve!(XX, WW, gp2, x0)
 
-    #[TODO move to diffusionDefinition]
+    #[TODO move to DiffusionDefinition.jl]
     #@inline DD.constdiff(P::LotkaVolterraAux) = true
 
     loglikelihood(XX, gp2)
