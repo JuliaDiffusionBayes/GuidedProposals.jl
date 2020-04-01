@@ -46,12 +46,11 @@ Struct for solving a (H,F,c)-system of ODEs.
     about eltype and the algorithm for solving ODEs. H,F,c are saved on a grid
     of time-points `tt`.
 """
-struct HFcSolver{Tmode,Tsv,Tps,Tcb,Ts,T,Ta} <: AbstractGuidingTermSolver{Tmode}
+struct HFcSolver{Tmode,Tsv,Ti,TT,T0,Ta} <: AbstractGuidingTermSolver{Tmode}
     saved_values::Tsv
-    problem_setup::Tps
-    callback::Tcb
-    solver::Ts
-    HFc0::T
+    integrator::Ti
+    HFcT::TT
+    HFc0::T0
     access::Ta
 
     function HFcSolver(
@@ -97,15 +96,15 @@ struct HFcSolver{Tmode,Tsv,Tps,Tcb,Ts,T,Ta} <: AbstractGuidingTermSolver{Tmode}
         D = DiffusionDefinition.dimension(P).process
         el = choices.eltype
 
-        problem_setup = (
-            f = HFc_update!,
-            HFcT = HFcContainer{el}(D),
-            interval = (tt[end], tt[1]),
-            buffer = HFcBuffer{el}(D),
-        )
-        update_HFc!(problem_setup.HFcT, xT_plus, obs)
+        HFcT = HFcContainer{el}(D)
+        update_HFc!(HFcT, xT_plus, obs)
 
-        prob = ODEProblem(problem_setup...)
+        prob = ODEProblem{true}(
+            HFc_update!,
+            HFcT,
+            (tt[end], tt[1]),
+            HFcBuffer{el}(D)
+        )
         saved_values = SavedValues(Float64, Tuple{Matrix{el},Vector{el},el})
         callback = SavingCallback(
             (u,t,integrator)->(u.H, u.F, u.c[1]),
@@ -114,15 +113,15 @@ struct HFcSolver{Tmode,Tsv,Tps,Tcb,Ts,T,Ta} <: AbstractGuidingTermSolver{Tmode}
             tdir=-1,
             save_everystep=false, # to prevent wasting memory allocations
         )
-        sol = solve(prob, choices.solver, callback=callback)
+        integrator = init(prob, choices.solver; callback=callback)
+        sol = solve!(integrator)
         HFc0 = sol.u[end]
-        Tsv, Tps = typeof(saved_values), typeof(problem_setup)
-        Tcb, Ts, T = typeof(callback), typeof(choices.solver), typeof(HFc0)
-        new{:inplace,Tsv,Tps,Tcb,Ts,T,Nothing}(
+        Tsv, Ti = typeof(saved_values), typeof(integrator), typeof(HFc0)
+        TT, T0 = typeof(HFcT), typeof(HFc0)
+        new{:inplace,Tsv,Ti,TT,T0,Nothing}(
             saved_values,
-            problem_setup,
-            callback,
-            choices.solver,
+            integrator,
+            HFcT,
             HFc0,
             nothing
         )
@@ -147,14 +146,13 @@ struct HFcSolver{Tmode,Tsv,Tps,Tcb,Ts,T,Ta} <: AbstractGuidingTermSolver{Tmode}
             vcat(SVector(dH), dF, SVector(dc))
         end
 
-        problem_setup = (
-            f = HFc_update,
-            HFcT = update_HFc(xT_plus, obs, access),
-            interval = (tt[end], tt[1]),
-        )
         el = choices.eltype
         TH, TF, Tc = prepare_static_saving_types(Val{:hfc}(), access, el)
-        prob = ODEProblem(problem_setup...)
+        prob = ODEProblem{false}(
+            HFc_update,
+            update_HFc(xT_plus, obs, access),
+            (tt[end], tt[1])
+        )
         saved_values = SavedValues(Float64, Tuple{TH,TF,Tc})
         callback = SavingCallback(
             (u,t,integrator) -> static_accessor_HFc(u, access),
@@ -163,16 +161,15 @@ struct HFcSolver{Tmode,Tsv,Tps,Tcb,Ts,T,Ta} <: AbstractGuidingTermSolver{Tmode}
             tdir=-1,
             save_everystep=false,
         )
-        sol = solve(prob, choices.solver, callback=callback)
+        integrator = init(prob, choices.solver, callback=callback)
+        sol = solve!(integrator)
         HFc0 = MVector(sol.u[end])
-        Tsv, Tps = typeof(saved_values), typeof(problem_setup)
-        Tcb, Ts, T = typeof(callback), typeof(choices.solver), typeof(HFc0)
+        Tsv, Ti, T0 = typeof(saved_values), typeof(integrator), typeof(HFc0)
         Ta = typeof(access)
-        new{:outofplace,Tsv,Tps,Tcb,Ts,T,Ta}(
+        new{:outofplace,Tsv,Ti,Nothing,T0,Ta}(
             saved_values,
-            problem_setup,
-            callback,
-            choices.solver,
+            integrator,
+            nothing,
             HFc0,
             deepcopy(access),
         )
@@ -256,9 +253,9 @@ function recompute_guiding_term(
         obs,
         xT_plus
     )
-    update_HFc!(s.problem_setup.HFcT, xT_plus, obs)
-    prob = ODEProblem(s.problem_setup...)
-    sol = solve(prob, s.solver, callback=s.callback)
+    update_HFc!(s.HFcT, xT_plus, obs)
+    reinit!(s.integrator, s.HFcT)
+    sol = solve!(s.integrator)
     s.HFc0 .= sol.u[end]
 end
 
@@ -268,12 +265,8 @@ function recompute_guiding_term(
         obs,
         xT_plus
     )
-    prob = ODEProblem(
-        s.problem_setup.f,
-        update_HFc(xT_plus, obs, s.access),
-        s.problem_setup.interval
-    )
-    sol = solve(prob, s.solver, callback=s.callback)
+    reinit!(s.integrator, update_HFc(xT_plus, obs, s.access))
+    sol = solve!(s.integrator)
     s.HFc0 .= sol.u[end]
 end
 

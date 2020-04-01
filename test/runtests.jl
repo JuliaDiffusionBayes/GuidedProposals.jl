@@ -17,7 +17,7 @@ const GP = GuidedProposals
     end
 
     function DD.β!(save_to, t, P::LotkaVolterraAux)
-        save_to[1] = P.δ*P.α/P.δ
+        save_to[1] = P.γ*P.α/P.δ
         save_to[2] = -P.α*P.γ/P.β
     end
 
