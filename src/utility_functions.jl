@@ -32,5 +32,6 @@ process.
 function static_accessor_HFc(u::K, ::Val{T}) where {K<:Union{SVector,MVector},T}
     Hidx = SVector{T*T,Int64}(1:T*T)
     Fidx = SVector{T,Int64}((T*T+1):(T*T+T))
+    #cidx = SVector{1,Int64}((T*T+T+1):(T*T+T+1))
     reshape(u[Hidx], Size(T,T)), u[Fidx], u[T*T+T+1]
 end

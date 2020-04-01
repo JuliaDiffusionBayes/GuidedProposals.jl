@@ -317,7 +317,6 @@ DD.constdiff(P::GuidProp) = DD.constdiff(P.P_target) && DD.constdiff(P.P_aux)
 
 DD._σ((t,i)::DD.IndexedTime, x, P::GuidProp) = DD.σ((t,i), x, P.P_target)
 
-
 DD._b((t, i)::DD.IndexedTime, x, P::GuidProp) = (
     DD.b(t, x, P.P_target)
     + DD.a(t, x, P.P_target) * ∇logρ(i, x, P)

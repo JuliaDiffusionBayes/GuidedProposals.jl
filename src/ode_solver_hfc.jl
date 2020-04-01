@@ -61,6 +61,9 @@ struct HFcSolver{Tmode,Tsv,Ti,TT,T0,Ta} <: AbstractGuidingTermSolver{Tmode}
             obs,
             choices,
         )
+        D = DiffusionDefinition.dimension(P).process
+        el = choices.eltype
+
         function HFc_update!(du, u, p, t)
             # shorthand names for views, hopefully optimised
             # ---
@@ -86,15 +89,19 @@ struct HFcSolver{Tmode,Tsv,Ti,TT,T0,Ta} <: AbstractGuidingTermSolver{Tmode}
             mul!(dF, B', F, -true, true)
             mul!(dF, H, β, true, true)
             # dc = dot(_β, F) + 0.5*outer(F' * _σ) - 0.5*sum(H .* _a)
-            dc[1] = -0.5*tr(tmat)
-            mul!(tvec', F', a)
+            # apparently, according to @time, a faster way to compute a trace,
+            # with no allocations
+            dc[1] = 0.0
+            for i in 1:D
+                dc[1] -= tmat[i,i]
+            end
+            dc[1] *= 0.5
+            #@time dc[1] = -0.5*tr(tmat)
+            mul!(tvec, a', F)
             mul!(dc, tvec', F, 0.5, true)
             mul!(dc, β', F, true, true)
             # ---
         end
-
-        D = DiffusionDefinition.dimension(P).process
-        el = choices.eltype
 
         HFcT = HFcContainer{el}(D)
         update_HFc!(HFcT, xT_plus, obs)
@@ -110,10 +117,14 @@ struct HFcSolver{Tmode,Tsv,Ti,TT,T0,Ta} <: AbstractGuidingTermSolver{Tmode}
             (u,t,integrator)->(u.H, u.F, u.c[1]),
             saved_values;
             saveat=reverse(tt),
-            tdir=-1,
+            tdir=-1
+        )
+        integrator = init(
+            prob,
+            choices.solver;
+            callback=callback,
             save_everystep=false, # to prevent wasting memory allocations
         )
-        integrator = init(prob, choices.solver; callback=callback)
         sol = solve!(integrator)
         HFc0 = sol.u[end]
         Tsv, Ti = typeof(saved_values), typeof(integrator), typeof(HFc0)
@@ -142,7 +153,7 @@ struct HFcSolver{Tmode,Tsv,Ti,TT,T0,Ta} <: AbstractGuidingTermSolver{Tmode}
 
             dH = - (_B' * H) - (H * _B) + outer(H * _σ)
             dF = - (_B' * F) + (H * _a * F) + (H * _β)
-            dc = dot(_β, F) + 0.5*outer(F' * _σ) - 0.5*sum(H .* _a)
+            dc = dot(_β, F) + 0.5*outer(F' * _σ) - 0.5*tr(H*_a)
             vcat(SVector(dH), dF, SVector(dc))
         end
 
@@ -158,10 +169,14 @@ struct HFcSolver{Tmode,Tsv,Ti,TT,T0,Ta} <: AbstractGuidingTermSolver{Tmode}
             (u,t,integrator) -> static_accessor_HFc(u, access),
             saved_values;
             saveat=reverse(tt),
-            tdir=-1,
-            save_everystep=false,
+            tdir=-1
         )
-        integrator = init(prob, choices.solver, callback=callback)
+        integrator = init(
+            prob,
+            choices.solver,
+            callback=callback,
+            save_everystep=false, # to prevent wasting memory allocations
+        )
         sol = solve!(integrator)
         HFc0 = MVector(sol.u[end])
         Tsv, Ti, T0 = typeof(saved_values), typeof(integrator), typeof(HFc0)
@@ -204,7 +219,7 @@ Update equations for H,F,c at the times of observations.
 """
 function update_HFc(u_Tplus, obs, access)
     L, Λ, v, μ = obs.L, obs.Λ, obs.obs, obs.μ
-    m, d = size(L)
+    m, _ = size(L)
     H, F, c = static_accessor_HFc(u_Tplus, access)
     dH = L'*Λ*L
     dF = L*Λ*v
@@ -245,7 +260,6 @@ Return saved scalar c[i] (with c[1] indicating c at time 0+ and c[end]
 indicating c at time T).
 """
 c(s::HFcSolver, i::Integer) = s.saved_values.saveval[end-i+1][3]
-
 
 function recompute_guiding_term(
         s::HFcSolver{:inplace},
