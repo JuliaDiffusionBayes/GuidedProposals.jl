@@ -23,7 +23,7 @@ for simulation of guided proposals and computation of their likelihood.
         GuidProp(
                 tt,
                 P_target::R,
-                P_aux::R2,
+                P_aux_type::Type{TR2},
                 obs::O,
                 solver_choice=(
                     solver=Tsit5(),
@@ -34,13 +34,13 @@ for simulation of guided proposals and computation of their likelihood.
                     eltype=Float64,
                 ),
                 next_guided_prop=nothing
-            ) where {R2,O}
+            ) where {R<:DD.DiffusionProcess,TR2<:DD.DiffusionProcess,O<:DOS.Observation}
 
-    Default constructor. `P_target` and `P_aux` are the target and auxiliary
-    diffusion laws respectively, `tt` is the time-grid on which `∇logρ` needs to
-    be computed. `obs` is the terminal observation (and the only one on the
-    interval (`tt[1]`, `tt[end]`]). `solver_choice` specifies the type of ODE
-    solver that is to be used for computations of `∇logρ`
+    Default constructor. `P_target` and `P_aux` are the target and the type of
+    the auxiliary diffusion laws respectively, `tt` is the time-grid on which
+    `∇logρ` needs to be computed. `obs` is the terminal observation (and the
+    only one on the interval (`tt[1]`, `tt[end]`]). `solver_choice` specifies
+    the type of ODE solver that is to be used for computations of `∇logρ`
         ( it is a `NamedTuple`, where `solver` specifies the algorithm for
         solving ODEs (see the documentation of DifferentialEquations.jl for
         possible choices), `ode_type` picks the ODE system (between :HFc, :MLμ
@@ -72,7 +72,7 @@ struct GuidProp{K,DP,DW,SS,R,R2,O,S,T} <: DD.DiffusionProcess{K,DP,DW,SS}
     function GuidProp(
             tt,
             P_target::R,
-            P_aux::R2,
+            P_aux_type::Type{TR2},
             obs::O,
             solver_choice=(
                 solver=Tsit5(),
@@ -83,7 +83,17 @@ struct GuidProp{K,DP,DW,SS,R,R2,O,S,T} <: DD.DiffusionProcess{K,DP,DW,SS}
                 eltype=Float64,
             );
             next_guided_prop=nothing,
-        ) where {R<:DD.DiffusionProcess,R2<:DD.DiffusionProcess,O<:DOS.Observation}
+        ) where {R<:DD.DiffusionProcess,TR2<:DD.DiffusionProcess,O<:DOS.Observation}
+        @assert tt[end] == obs.t
+
+        P_aux = TR2(
+            DD.parameters(P_target)...,
+            tt[1],
+            obs.t,
+            deepcopy(DOS.ν(obs)),
+            (obs.full_obs ? deepcopy(DOS.ν(obs)) : tuple() )...
+        )
+        R2 = typeof(P_aux)
 
         choices_now, choices_to_pass_on = reformat(
             solver_choice,
@@ -508,4 +518,28 @@ function solve_and_ll!(
         ::AbstractGuidingTermSolver{:inplace},
         y1::Vector{K},
     ) where {K,T}
+end
+
+function standard_build_guid_prop(
+        ::Type{AuxLaw}, recording::NamedTuple, tts::Vector, args...
+    ) where {AuxLaw <: DD.DiffusionProcess}
+
+    N = length(recording.obs)
+    @assert N == length(tts)
+
+    GP_temp = nothing
+    guid_props = map(N:-1:1) do i
+        GP_temp = (
+            i==N ?
+            GuidProp(
+                tts[i], recording.P, AuxLaw, recording.obs[i], args...,
+            ) :
+            GuidProp(
+                tts[i], recording.P, AuxLaw, recording.obs[i], args...,;
+                next_guided_prop=GP_temp
+            )
+        )
+    end
+    reverse!(guid_props)
+    guid_props
 end

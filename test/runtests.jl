@@ -40,14 +40,14 @@ const GP = GuidedProposals
     Base.eltype(::LotkaVolterraAux{T}) where T = T
 
     P = LotkaVolterraAux(
-        2.0/3.0, 4.0/3.0, 1.0, 1.0, 0.2, 0.2, 0.0,0.0, nothing, nothing
+        2.0/3.0, 4.0/3.0, 1.0, 1.0, 0.2, 0.2, 0.0, 0.0, nothing
     )
 
     function build_params(mode, obs, Σ; t0=0)
         params_intv1 = (
             tt = (t0+0.0):0.01:(t0+1.0),
             P_aux = P,
-            P_target = P,
+            P_target = LotkaVolterraAux,
             obs = DOS.LinearGsnObs(t0+1.0, obs; Σ=Σ),
             solver_choice=(
                 solver=Tsit5(),
@@ -154,14 +154,11 @@ const GP = GuidedProposals
     loglikhd(XX, gp2_static)
     loglikhd_obs(gp2_static, x0)
 
-    # in DiffusionDefinition it asserts Float64 eltype, change it there
-    DD.β(t, P::LotkaVolterraAux) = @SVector [P.γ/P.δ*P.α, -P.α/P.β*P.γ]
-
     function foo(θ)
         params_intv2 = (
             tt = 1.0:0.01:2.0,
-            P_target = LotkaVolterraAux(θ..., 0.0,0.0, nothing, nothing),
-            P_aux = LotkaVolterraAux(θ..., 0.0,0.0, nothing, nothing),
+            P_target = LotkaVolterraAux(θ..., 0.0,0.0, nothing),
+            P_aux_type = LotkaVolterraAux,
             obs = DOS.LinearGsnObs(2.0, (@SVector [2.0, 3.0]); Σ=SDiagonal(1.0, 1.0)),
             solver_choice=(
                 solver=Tsit5(),
@@ -199,34 +196,28 @@ end
 
 
 @testset "bffg.jl" begin
+    @load_diffusion LotkaVolterra
     @load_diffusion LotkaVolterraAux
 
-    tt = [1.0, 2.0, 3.0]
-    observs = [(@SVector [1.0, 2.0]), (@SVector [2.0, 3.0]), (@SVector [1.5, 2.5])]
-    x0_prior = KnownStartingPt((@SVector [0.5, 1.0]))
-    P = LotkaVolterraAux(
-        2.0/3.0, 4.0/3.0, 1.0, 1.0, 0.2, 0.2, 0.0,0.0, nothing, nothing
+    θ = [2.0/3.0, 4.0/3.0, 1.0, 1.0, 0.2, 0.2]
+    x0 = @SVector [0.5, 1.0]
+    recording_params = (
+        tt = [1.0, 2.0, 3.0],
+        observs = [(@SVector [1.0, 2.0]), (@SVector [2.0, 3.0]), (@SVector [1.5, 2.5])],
+        P = LotkaVolterra(θ...),
+        t0 = 0.0,
+        x0_prior = KnownStartingPt(x0),
     )
     recording = build_recording(
-        LinearGsnObs, tt, observs, P, 0.0, x0_prior;
+        LinearGsnObs, recording_params...;
         Σ = SDiagonal(1.0, 1.0),
     )
-    aux_laws = package(P, recording)
+
     tts = [0.0:0.01:1.0, 1.0:0.01:2.0, 2.0:0.01:3.0]
-    guid_props = let
-        GP_temp = nothing
-        map(3:-1:1) do i
-            GP_temp = (
-                i==3 ?
-                GuidProp(tts[i], P, aux_laws[i], recording.obs[i]) :
-                GuidProp(tts[i], P, aux_laws[i], recording.obs[i]; next_guided_prop=GP_temp)
-            )
-            GP_temp
-        end
-    end
-    reverse!(guid_props)
+    guid_props = standard_build_guid_prop(LotkaVolterraAux, recording, tts)
+
 
     XX = [Trajectory(collect(tts[i]), zeros(SVector{2,Float64}, length(tts[i]))) for i in 1:3]
     WW = [Trajectory(collect(tts[i]), zeros(SVector{2,Float64}, length(tts[i]))) for i in 1:3]
-    forward_guide!(WW, XX, [Wiener(),Wiener(),Wiener()], guid_props, x0_prior.y)
+    forward_guide!(WW, XX, [Wiener(),Wiener(),Wiener()], guid_props, x0)
 end
