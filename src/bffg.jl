@@ -75,3 +75,11 @@ end
 #===============================================================================
                                 Backward filter
 ===============================================================================#
+
+function backward_filter!(P::Vector{<:GuidProp})
+    N = length(P)
+    recompute_guiding_term!(P[end])
+    for i in (N-1):-1:1
+        recompute_guiding_term!(P[i], P[i+1])
+    end
+end

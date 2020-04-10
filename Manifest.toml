@@ -107,7 +107,7 @@ version = "2.12.1"
 
 [[DiffObservScheme]]
 deps = ["Distributions", "GaussianDistributions", "LinearAlgebra", "Random", "StaticArrays"]
-git-tree-sha1 = "308f8d70f4750ecf80b8076bd5ac53434224a269"
+git-tree-sha1 = "8391e5b8cd77923f9b90375b1cc481fd4c8d9bfc"
 repo-rev = "master"
 repo-url = "https://github.com/JuliaDiffusionBayes/DiffObservScheme.jl"
 uuid = "a6ddd3f2-050f-41aa-9a1f-1d4f9243493f"
@@ -127,7 +127,7 @@ version = "1.0.1"
 
 [[DiffusionDefinition]]
 deps = ["LinearAlgebra", "MacroTools", "Random", "Reexport", "StaticArrays", "Trajectories"]
-git-tree-sha1 = "2860f8e74f7ff6f0191cb8de50a93d76f92858ab"
+git-tree-sha1 = "ede136649deb85f037feb09ac82a84aa3a6994f6"
 repo-rev = "master"
 repo-url = "https://github.com/JuliaDiffusionBayes/DiffusionDefinition.jl"
 uuid = "c126fcb9-5a08-4fee-b75a-97eb446288b0"

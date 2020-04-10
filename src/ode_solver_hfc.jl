@@ -267,7 +267,7 @@ indicating c at time T).
 """
 c(s::HFcSolver, i::Integer) = s.saved_values.saveval[end-i+1][3]
 
-function recompute_guiding_term(
+function recompute_guiding_term!(
         s::HFcSolver{:inplace},
         P,
         obs,
@@ -279,7 +279,7 @@ function recompute_guiding_term(
     s.HFc0 .= sol.u[end]
 end
 
-function recompute_guiding_term(
+function recompute_guiding_term!(
         s::HFcSolver{:outofplace},
         P,
         obs,

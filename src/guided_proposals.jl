@@ -33,7 +33,7 @@ for simulation of guided proposals and computation of their likelihood.
                     gradients=false,
                     eltype=Float64,
                 ),
-                next_guiding_term=nothing
+                next_guided_prop=nothing
             ) where {R2,O}
 
     Default constructor. `P_target` and `P_aux` are the target and auxiliary
@@ -54,7 +54,7 @@ for simulation of guided proposals and computation of their likelihood.
         `gradients` is a flag indicating whether automatic differentiation is to
         be employed and `eltype` indicates the data-type of each container's
         member. )
-    Finally, `next_guiding_term` is the guided proposal for the subsequent
+    Finally, `next_guided_prop` is the guided proposal for the subsequent
     inter-observation interval.
 """
 struct GuidProp{K,DP,DW,SS,R,R2,O,S,T} <: DD.DiffusionProcess{K,DP,DW,SS}
@@ -82,12 +82,12 @@ struct GuidProp{K,DP,DW,SS,R,R2,O,S,T} <: DD.DiffusionProcess{K,DP,DW,SS}
                 gradients=false,
                 eltype=Float64,
             );
-            next_guiding_term=nothing,
+            next_guided_prop=nothing,
         ) where {R<:DD.DiffusionProcess,R2<:DD.DiffusionProcess,O<:DOS.Observation}
 
         choices_now, choices_to_pass_on = reformat(
             solver_choice,
-            next_guiding_term===nothing,
+            next_guided_prop===nothing,
             P_aux,
         )
 
@@ -97,7 +97,7 @@ struct GuidProp{K,DP,DW,SS,R,R2,O,S,T} <: DD.DiffusionProcess{K,DP,DW,SS}
             obs,
             Val{choices_now.mode}(),
             choices_to_pass_on,
-            next_guiding_term,
+            next_guided_prop,
         )
         guiding_term_solver = init_solver(
             Val{choices_now.ode_type}(),
@@ -188,7 +188,7 @@ end
         obs,
         mode::Val,
         choices,
-        next_guiding_term
+        next_guided_prop
     )
 
 Initialise ODE solver for H,F,c, preallocate space and solve it once. `tt` is
@@ -197,7 +197,7 @@ the time-grid on which `∇logρ` is to be saved. `P_aux` is the auxiliary law,
 in-place, out-of-place and gpu constructors for the guiding term solver,
 `choices` contains additional information that is passed on (and which is about
 eltype and a chosen algorithm for the ODE solvers) and finally,
-`next_guiding_term` is the guided proposal used on the subsequent
+`next_guided_prop` is the guided proposal used on the subsequent
 inter-observation interval.
 """
 function init_solver(
@@ -208,12 +208,12 @@ function init_solver(
         obs,
         mode::Val,
         choices,
-        next_guiding_term
+        next_guided_prop
     )
 
     xT_plus = fetch_xT_plus(
         mode,
-        next_guiding_term,
+        next_guided_prop,
         choices.eltype,
         DD.dimension(P_aux).process
     )
@@ -229,7 +229,7 @@ function init_solver(
 end
 
 """
-    fetch_xT_plus(::Val{:inplace}, next_guiding_term, el, dim_of_proc)
+    fetch_xT_plus(::Val{:inplace}, next_guided_prop, el, dim_of_proc)
 
 If this is not the last inter-observation interval, fetch the data containing
 H,F,c computed for the left time-limit of the subsequent interval. Otherwise,
@@ -238,19 +238,19 @@ instantiate a zero-term.
 function fetch_xT_plus end
 
 #TODO switch to using buffers for this step
-function fetch_xT_plus(::Val{:inplace}, next_guiding_term, el, dim_of_proc)
+function fetch_xT_plus(::Val{:inplace}, next_guided_prop, el, dim_of_proc)
     (
-        next_guiding_term===nothing ?
+        next_guided_prop===nothing ?
         HFcContainer{el}(dim_of_proc) :
-        HFc0(next_guiding_term)
+        HFc0(next_guided_prop)
     )
 end
 
-function fetch_xT_plus(::Val{:outofplace}, next_guiding_term, el, dim_of_proc)
+function fetch_xT_plus(::Val{:outofplace}, next_guided_prop, el, dim_of_proc)
     (
-        next_guiding_term===nothing ?
+        next_guided_prop===nothing ?
         zero(SVector{size_of_HFc_solution(dim_of_proc),el}) :
-        HFc0(next_guiding_term)
+        HFc0(next_guided_prop)
     )
 end
 
@@ -333,20 +333,20 @@ remove].
 mode(P::GuidProp) =  mode(P.guiding_term_solver)
 
 """
-    recompute_guiding_term(P::GuidProp, next_guiding_term=nothing)
+    recompute_guiding_term!(P::GuidProp, next_guided_prop=nothing)
 
 Recompute the guiding term (most often used after update of parameters or change
-of an observation). `next_guiding_term` is the guided proposal law from the
+of an observation). `next_guided_prop` is the guided proposal law from the
 subsequent interval
 """
-function recompute_guiding_term(P::GuidProp, next_guiding_term=nothing)
+function recompute_guiding_term!(P::GuidProp, next_guided_prop=nothing)
     xT_plus = fetch_xT_plus(
         Val{mode(P)}(),
-        next_guiding_term,
+        next_guided_prop,
         eltype(HFc0(P)),
         DD.dimension(P).process
     )
-    recompute_guiding_term(P.guiding_term_solver, P.P_aux, P.obs, xT_plus)
+    recompute_guiding_term!(P.guiding_term_solver, P.P_aux, P.obs, xT_plus)
 end
 
 

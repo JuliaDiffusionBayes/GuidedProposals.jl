@@ -65,28 +65,28 @@ const GP = GuidedProposals
     )
     gp1_inplace = GuidProp(
         build_params(:inplace, [2.0, 3.0], [1.0 0.0; 0.0 1.0]; t0=1.0)...,
-        next_guiding_term=gp2_inplace
+        next_guided_prop=gp2_inplace
     )
 
     gp1_inplace_recomputed = deepcopy(gp1_inplace)
     gp2_inplace_recomputed = deepcopy(gp2_inplace)
 
-    recompute_guiding_term(gp2_inplace_recomputed, nothing)
-    recompute_guiding_term(gp1_inplace_recomputed, gp2_inplace_recomputed)
+    recompute_guiding_term!(gp2_inplace_recomputed, nothing)
+    recompute_guiding_term!(gp1_inplace_recomputed, gp2_inplace_recomputed)
 
     gp2_static = GuidProp(
         build_params(:outofplace, (@SVector [1.0, 2.0]), SDiagonal(1.0, 1.0); t0=0.0)...
     )
     gp1_static = GuidProp(
         build_params(:outofplace, (@SVector [2.0, 3.0]), SDiagonal(1.0, 1.0); t0=1.0)...,
-        next_guiding_term=gp2_static
+        next_guided_prop=gp2_static
     )
 
     gp1_static_recomputed = deepcopy(gp1_static)
     gp2_static_recomputed = deepcopy(gp2_static)
 
-    recompute_guiding_term(gp2_static, nothing)
-    recompute_guiding_term(gp1_static, gp2_static)
+    recompute_guiding_term!(gp2_static, nothing)
+    recompute_guiding_term!(gp1_static, gp2_static)
 
     @testset "computation of H,F,c" begin
         @testset "recomputation inplace" for i in 1:101
@@ -174,7 +174,7 @@ const GP = GuidedProposals
         )
 
         gp2 = GuidProp(params_intv2...)
-        recompute_guiding_term(gp2, nothing)
+        recompute_guiding_term!(gp2, nothing)
 
         sum(gp2.guiding_term_solver.HFc0)
     end
@@ -219,7 +219,7 @@ end
             GP_temp = (
                 i==3 ?
                 GuidProp(tts[i], P, aux_laws[i], recording.obs[i]) :
-                GuidProp(tts[i], P, aux_laws[i], recording.obs[i]; next_guiding_term=GP_temp)
+                GuidProp(tts[i], P, aux_laws[i], recording.obs[i]; next_guided_prop=GP_temp)
             )
             GP_temp
         end

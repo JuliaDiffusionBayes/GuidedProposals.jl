@@ -17,7 +17,7 @@ include("ode_solver_pnu.jl")
 include("bffg.jl")
 
 
-export GuidProp, H, F, c, recompute_guiding_term
+export GuidProp, H, F, c, recompute_guiding_term!
 export loglikhd, loglikhd_obs
-export forward_guide!
+export forward_guide!, backward_filter!
 end
