@@ -34,11 +34,11 @@ for simulation of guided proposals and computation of their likelihood.
                     eltype=Float64,
                 ),
                 next_guiding_term=nothing
-            ) where {R,R2,O}
+            ) where {R2,O}
 
     Default constructor. `P_target` and `P_aux` are the target and auxiliary
-    diffusion laws respectively. `tt` is the time-grid on which `∇logρ` needs
-    to be computed. `obs` is the terminal observation (and the only one on the
+    diffusion laws respectively, `tt` is the time-grid on which `∇logρ` needs to
+    be computed. `obs` is the terminal observation (and the only one on the
     interval (`tt[1]`, `tt[end]`]). `solver_choice` specifies the type of ODE
     solver that is to be used for computations of `∇logρ`
         ( it is a `NamedTuple`, where `solver` specifies the algorithm for
@@ -57,13 +57,17 @@ for simulation of guided proposals and computation of their likelihood.
     Finally, `next_guiding_term` is the guided proposal for the subsequent
     inter-observation interval.
 """
-struct GuidProp{
-        K,DP,DW,SS,R,R2,O,S,T
-        } <: DiffusionDefinition.DiffusionProcess{K,DP,DW,SS}
+struct GuidProp{K,DP,DW,SS,R,R2,O,S,T} <: DD.DiffusionProcess{K,DP,DW,SS}
     P_target::R
     P_aux::R2
     obs::O
     guiding_term_solver::S
+
+    function GuidProp{K,DP,DW,SS,R,R2,O,S,T}(
+            P_target::R, P_aux::R2, obs::O, guiding_term_solver::S
+        ) where {K,DP,DW,SS,R,R2,O,S,T}
+        new{K,DP,DW,SS,R,R2,O,S,T}(P_target, P_aux, obs, guiding_term_solver)
+    end
 
     function GuidProp(
             tt,
@@ -74,12 +78,12 @@ struct GuidProp{
                 solver=Tsit5(),
                 ode_type=:HFc,
                 convert_to_HFc=false,
-                mode=:inplace,
+                mode=:outofplace,
                 gradients=false,
                 eltype=Float64,
-            ),
-            next_guiding_term=nothing
-        ) where {R,R2,O}
+            );
+            next_guiding_term=nothing,
+        ) where {R<:DD.DiffusionProcess,R2<:DD.DiffusionProcess,O<:DOS.Observation}
 
         choices_now, choices_to_pass_on = reformat(
             solver_choice,
@@ -108,6 +112,23 @@ struct GuidProp{
 
         new{K,DP,DW,SS,R,R2,O,S,T}(P_target, P_aux, obs, guiding_term_solver)
     end
+end
+
+"""
+    GuidProp(P::GuidProp, θ°, η°)
+
+Create new guided proposals object with new parameters `θ°` parametrizing the
+diffusion laws and `η°` parametrizing the observations. Keep the pre-allocated
+spaces for solvers unchanged.
+"""
+function GuidProp(P::GuidProp, θ°, η°)
+    T = typeof(P)
+    T(
+        DD.clone(P.P_target, θ°),
+        DD.clone(P.P_aux, θ°),
+        DOS.clone(P.obs, η°),
+        P.guiding_term_solver,
+    )
 end
 
 """
@@ -294,14 +315,30 @@ indicating time 0+ and tt[end] indicating time T).
 """
 Base.time(P::GuidProp, i) = P.guiding_term_solver.saved_values.t[end-i+1]
 
+"""
+    DD.dimension(P::GuidProp)
+
+Dimension of the stochastic process and the driving Brownian motion (by default
+the same as that of the target process)
+"""
 DD.dimension(P::GuidProp) = DD.dimension(P.P_target)
 
-abstract type IntegrationRule end
+"""
+    mode(P::GuidProp)
 
-struct LeftRule <: IntegrationRule end
-
+Return the mode of solving ODE systems (:inplace, :outofplace or :gpu) [TODO not
+used much, for multiple dispatch needs to return Val{mode}() instead, change  or
+remove].
+"""
 mode(P::GuidProp) =  mode(P.guiding_term_solver)
 
+"""
+    recompute_guiding_term(P::GuidProp, next_guiding_term=nothing)
+
+Recompute the guiding term (most often used after update of parameters or change
+of an observation). `next_guiding_term` is the guided proposal law from the
+subsequent interval
+"""
 function recompute_guiding_term(P::GuidProp, next_guiding_term=nothing)
     xT_plus = fetch_xT_plus(
         Val{mode(P)}(),
@@ -312,6 +349,9 @@ function recompute_guiding_term(P::GuidProp, next_guiding_term=nothing)
     recompute_guiding_term(P.guiding_term_solver, P.P_aux, P.obs, xT_plus)
 end
 
+
+"""
+"""
 DD.constdiff(P::GuidProp) = DD.constdiff(P.P_target) && DD.constdiff(P.P_aux)
 
 
@@ -332,15 +372,15 @@ end
 ∇logρ(i::Integer, x, P::GuidProp) = ∇logρ(i, x, P.guiding_term_solver)
 
 
-function loglikelihood(X::Trajectory, P::GuidProp; skip=0)
-    loglikelihood(LeftRule(), X, P, P.guiding_term_solver; skip=skip)
+function loglikhd(X::Trajectory, P::GuidProp; skip=0)
+    loglikhd(LeftRule(), X, P, P.guiding_term_solver; skip=skip)
 end
 
-function loglikelihood(ir::IntegrationRule, X::Trajectory, P::GuidProp; skip=0)
-    loglikelihood(ir, X, P, P.guiding_term_solver; skip=skip)
+function loglikhd(ir::IntegrationRule, X::Trajectory, P::GuidProp; skip=0)
+    loglikhd(ir, X, P, P.guiding_term_solver; skip=skip)
 end
 
-function loglikelihood(
+function loglikhd(
         ::LeftRule,
         X::Trajectory,
         P::GuidProp,
@@ -371,7 +411,7 @@ function loglikelihood(
 end
 
 # NOTE worry about this later...
-function loglikelihood(
+function loglikhd(
         ::LeftRule,
         X::Trajectory,
         P::GuidProp,
@@ -404,13 +444,68 @@ function loglikelihood(
     ll
 end
 
-loglikelihood_obs(P::GuidProp, x0) = loglikelihood_obs(P, x0, P.guiding_term_solver)
+loglikhd_obs(P::GuidProp, x0) = loglikhd_obs(P, x0, P.guiding_term_solver)
 
-function loglikelihood_obs(P::GuidProp, x0, ::AbstractGuidingTermSolver{:outofplace})
+function loglikhd_obs(P::GuidProp, x0, ::AbstractGuidingTermSolver{:outofplace})
     - 0.5 * ( x0'*H(P, 1)*x0 - 2.0*dot(F(P, 1), x0) ) - c(P, 1)
 end
 
 # worry about it later
-function loglikelihood_obs(P::GuidProp, x0, ::AbstractGuidingTermSolver{:inplace})
+function loglikhd_obs(P::GuidProp, x0, ::AbstractGuidingTermSolver{:inplace})
     - 0.5 * ( x0'*H(P, 1)*x0 - 2.0*dot(F(P, 1), x₀) ) - c(P, 1)
+end
+
+function solve_and_ll!(XX, WW, P, y1)
+    solve_and_ll!(XX, WW, P, P.guiding_term_solver, y1)
+end
+
+# simulate guided proposals and compute the likelihood at the same time
+function solve_and_ll!(
+        XX::Trajectory{T,Vector{KX}},
+        WW::Trajectory{T,Vector{KW}},
+        P::GuidProp,
+        ::AbstractGuidingTermSolver{:outofplace},
+        y1::KX,
+    ) where {KX,KW,T}
+    yy, ww, tt = XX.x, WW.x, XX.t
+    N = length(XX)
+    ll = 0.0
+
+    yy[1] = y1
+    for i in 1:(N-1)
+        x = yy[i]
+        s = tt[i]
+        dt = tt[i+1] - tt[i]
+        dW = ww[i+1] - ww[i]
+
+        r_i = ∇logρ(i, x, P)
+        b_i = DD.b(s, x, P.P_target)
+        btil_i = DD.b(s, x, P.P_aux)
+
+        σ_i = DD.σ(s, x, P.P_target)
+        a_i = σ_i*σ_i'
+
+        ll += dot(b_i-btil_i, r_i) * dt
+
+        if !DD.constdiff(P)
+            H_i = H(i, x, P)
+            atil_i = DD.a(s, x, P.P_aux)
+            ll += 0.5*tr( (a_i - atil_i)*(r_i*r_i'-H_i') ) * dt
+        end
+
+        yy[i+1] = x + (a_i*r_i + b_i)*dt + σ_i*dW
+
+        DD.bound_satisfied(P, yy[i+1]) || return false, -Inf
+    end
+    true, ll
+end
+
+#NOTE worry about it later
+function solve_and_ll!(
+        XX::Trajectory{T,Vector{Vector{K}}},
+        WW::Trajectory{T,Vector{Vector{K}}},
+        P::GuidProp,
+        ::AbstractGuidingTermSolver{:inplace},
+        y1::Vector{K},
+    ) where {K,T}
 end

@@ -8,7 +8,7 @@ makedocs(;
     ],
     repo="https://github.com/JuliaDiffusionBayes/GuidedProposals.jl/blob/{commit}{path}#L{line}",
     sitename="GuidedProposals.jl",
-    authors="Marcin Mider",
+    authors="Sebastiano Grazzi, Frank van der Meulen, Marcin Mider, Moritz Schauer",
     assets=String[],
 )
 

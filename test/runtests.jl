@@ -1,8 +1,9 @@
-using GuidedProposals, DiffusionDefinition
+using GuidedProposals, DiffusionDefinition, DiffObservScheme
 using OrdinaryDiffEq, StaticArrays
 using ForwardDiff, Random
 using Test
 const DD = DiffusionDefinition
+const DOS = DiffObservScheme
 const GP = GuidedProposals
 
 @testset "GuidedProposals.jl" begin
@@ -42,50 +43,29 @@ const GP = GuidedProposals
         2.0/3.0, 4.0/3.0, 1.0, 1.0, 0.2, 0.2, 0.0,0.0, nothing, nothing
     )
 
-    function build_obs(::Val{:outofplace}, obs)
-        (
-            obs = obs,
-            Σ = (@SMatrix [1.0 0.0; 0.0 1.0]),
-            Λ = (@SMatrix [1.0 0.0; 0.0 1.0]),
-            μ = (@SVector [0.0, 0.0]),
-            L = (@SMatrix [1.0 0.0; 0.0 1.0]),
-        )
-    end
-
-    function build_obs(::Val{:inplace}, obs)
-        (
-            obs = obs,
-            Σ = [1.0 0.0; 0.0 1.0],
-            Λ = [1.0 0.0; 0.0 1.0],
-            μ = [0.0, 0.0],
-            L = [1.0 0.0; 0.0 1.0],
-        )
-    end
-
-    function build_params(mode, obs, gradients; t0=0)
+    function build_params(mode, obs, Σ; t0=0)
         params_intv1 = (
             tt = (t0+0.0):0.01:(t0+1.0),
-            P_target = P,
             P_aux = P,
-            obs = build_obs(Val{mode}(), obs),
+            P_target = P,
+            obs = DOS.LinearGsnObs(t0+1.0, obs; Σ=Σ),
             solver_choice=(
                 solver=Tsit5(),
                 ode_type=:HFc,
                 convert_to_HFc=false,
                 mode=mode,
-                gradients=gradients,
+                gradients=false,
                 eltype=Float64,
             )
         )
     end
 
     gp2_inplace = GuidProp(
-        build_params(:inplace, [1.0, 2.0], false; t0=0.0)...,
-        nothing
+        build_params(:inplace, [1.0, 2.0], [1.0 0.0; 0.0 1.0]; t0=0.0)...
     )
     gp1_inplace = GuidProp(
-        build_params(:inplace, [2.0, 3.0], false; t0=1.0)...,
-        gp2_inplace
+        build_params(:inplace, [2.0, 3.0], [1.0 0.0; 0.0 1.0]; t0=1.0)...,
+        next_guiding_term=gp2_inplace
     )
 
     gp1_inplace_recomputed = deepcopy(gp1_inplace)
@@ -95,12 +75,11 @@ const GP = GuidedProposals
     recompute_guiding_term(gp1_inplace_recomputed, gp2_inplace_recomputed)
 
     gp2_static = GuidProp(
-        build_params(:outofplace, (@SVector [1.0, 2.0]), false; t0=0.0)...,
-        nothing
+        build_params(:outofplace, (@SVector [1.0, 2.0]), SDiagonal(1.0, 1.0); t0=0.0)...
     )
     gp1_static = GuidProp(
-        build_params(:outofplace, (@SVector [2.0, 3.0]), false; t0=1.0)...,
-        gp2_static
+        build_params(:outofplace, (@SVector [2.0, 3.0]), SDiagonal(1.0, 1.0); t0=1.0)...,
+        next_guiding_term=gp2_static
     )
 
     gp1_static_recomputed = deepcopy(gp1_static)
@@ -172,8 +151,8 @@ const GP = GuidedProposals
     #[TODO move to DiffusionDefinition.jl]
     #@inline DD.constdiff(P::LotkaVolterraAux) = true
 
-    loglikelihood(XX, gp2_static)
-    loglikelihood_obs(gp2_static, x0)
+    loglikhd(XX, gp2_static)
+    loglikhd_obs(gp2_static, x0)
 
     # in DiffusionDefinition it asserts Float64 eltype, change it there
     DD.β(t, P::LotkaVolterraAux) = @SVector [P.γ/P.δ*P.α, -P.α/P.β*P.γ]
@@ -183,13 +162,7 @@ const GP = GuidedProposals
             tt = 1.0:0.01:2.0,
             P_target = LotkaVolterraAux(θ..., 0.0,0.0, nothing, nothing),
             P_aux = LotkaVolterraAux(θ..., 0.0,0.0, nothing, nothing),
-            obs = (
-                obs = (@SVector [2.0, 3.0]),
-                Σ = (@SMatrix [1.0 0.0; 0.0 1.0]),
-                Λ = (@SMatrix [1.0 0.0; 0.0 1.0]),
-                μ = (@SVector [0.0, 0.0]),
-                L = (@SMatrix [1.0 0.0; 0.0 1.0]),
-            ),
+            obs = DOS.LinearGsnObs(2.0, (@SVector [2.0, 3.0]); Σ=SDiagonal(1.0, 1.0)),
             solver_choice=(
                 solver=Tsit5(),
                 ode_type=:HFc,
@@ -200,7 +173,7 @@ const GP = GuidedProposals
             )
         )
 
-        gp2 = GuidProp(params_intv2..., nothing)
+        gp2 = GuidProp(params_intv2...)
         recompute_guiding_term(gp2, nothing)
 
         sum(gp2.guiding_term_solver.HFc0)
@@ -222,4 +195,38 @@ const GP = GuidedProposals
     @testset "automatic differentiation" for i in 1:6
         @test abs( (out_mod[i] - out_at_θ)/ϵ - grad[i] ) < 0.1
     end
+end
+
+
+@testset "bffg.jl" begin
+    @load_diffusion LotkaVolterraAux
+
+    tt = [1.0, 2.0, 3.0]
+    observs = [(@SVector [1.0, 2.0]), (@SVector [2.0, 3.0]), (@SVector [1.5, 2.5])]
+    x0_prior = KnownStartingPt((@SVector [0.5, 1.0]))
+    P = LotkaVolterraAux(
+        2.0/3.0, 4.0/3.0, 1.0, 1.0, 0.2, 0.2, 0.0,0.0, nothing, nothing
+    )
+    recording = build_recording(
+        LinearGsnObs, tt, observs, P, 0.0, x0_prior;
+        Σ = SDiagonal(1.0, 1.0),
+    )
+    aux_laws = package(P, recording)
+    tts = [0.0:0.01:1.0, 1.0:0.01:2.0, 2.0:0.01:3.0]
+    guid_props = let
+        GP_temp = nothing
+        map(3:-1:1) do i
+            GP_temp = (
+                i==3 ?
+                GuidProp(tts[i], P, aux_laws[i], recording.obs[i]) :
+                GuidProp(tts[i], P, aux_laws[i], recording.obs[i]; next_guiding_term=GP_temp)
+            )
+            GP_temp
+        end
+    end
+    reverse!(guid_props)
+
+    XX = [Trajectory(collect(tts[i]), zeros(SVector{2,Float64}, length(tts[i]))) for i in 1:3]
+    WW = [Trajectory(collect(tts[i]), zeros(SVector{2,Float64}, length(tts[i]))) for i in 1:3]
+    forward_guide!(WW, XX, [Wiener(),Wiener(),Wiener()], guid_props, x0_prior.y)
 end

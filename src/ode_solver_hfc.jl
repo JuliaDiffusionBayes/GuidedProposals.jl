@@ -114,6 +114,12 @@ struct HFcSolver{Tmode,Tsv,Ti,TT,T0,Ta} <: AbstractGuidingTermSolver{Tmode}
         )
         saved_values = SavedValues(Float64, Tuple{Matrix{el},Vector{el},el})
         callback = SavingCallback(
+            # NOTE this might need changing, even though it seems to be working
+            # correctly; from
+            # https://docs.sciml.ai/latest/features/callback_library/ :
+            # "save_func(u, t, integrator) returns the quantities which shall be
+            # saved. Note that this should allocate the output (not as a view to
+            # u)". Currently u.H & u.F provide views!
             (u,t,integrator)->(u.H, u.F, u.c[1]),
             saved_values;
             saveat=reverse(tt),
@@ -205,11 +211,11 @@ Update equations for H,F,c at the times of observations. Save the data into
 `u_T`.
 """
 function update_HFc!(u_T, u_Tplus, obs)
-    L, Λ, v, μ = obs.L, obs.Λ, obs.obs, obs.μ
+    L, Λ, Σ, v, μ = DOS.L(obs), DOS.Λ(obs), DOS.Σ(obs), DOS.ν(obs), DOS.μ(obs)
     m, d = size(L)
     u_T.H .= u_Tplus.H + L'*Λ*L
     u_T.F .= u_Tplus.F + L*Λ*v
-    u_T.c .= (u_Tplus.c .+ 0.5*( m*log(2π) + log(det(obs.Σ)) + (v-μ)'*Λ*(v-μ) ))
+    u_T.c .= (u_Tplus.c .+ 0.5*( m*log(2π) + log(det(Σ)) + (v-μ)'*Λ*(v-μ) ))
 end
 
 """
@@ -218,12 +224,12 @@ end
 Update equations for H,F,c at the times of observations.
 """
 function update_HFc(u_Tplus, obs, access)
-    L, Λ, v, μ = obs.L, obs.Λ, obs.obs, obs.μ
+    L, Λ, Σ, v, μ = DOS.L(obs), DOS.Λ(obs), DOS.Σ(obs), DOS.ν(obs), DOS.μ(obs)
     m, _ = size(L)
     H, F, c = static_accessor_HFc(u_Tplus, access)
     dH = L'*Λ*L
     dF = L*Λ*v
-    dc = 0.5*( m*log(2π) + log(det(obs.Σ)) + (v-μ)'*Λ*(v-μ) )
+    dc = 0.5*( m*log(2π) + log(det(Σ)) + (v-μ)'*Λ*(v-μ) )
     vcat(SVector(H + dH), (F + dF), SVector(c+dc))
 end
 

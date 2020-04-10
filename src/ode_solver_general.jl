@@ -16,3 +16,19 @@ or on GPUs (with states represented by cuArrays).
 abstract type AbstractGuidingTermSolver{Tmode} end
 
 mode(::AbstractGuidingTermSolver{Tmode}) where Tmode = Tmode
+
+"""
+    IntegrationRule
+
+Supertype of all integration rules. In this package we currently approximate the
+integrals by step functions with evaluations at the left side of the intervals.
+"""
+abstract type IntegrationRule end
+
+"""
+    LeftRule <: IntegrationRule
+
+Integration rule flag, indicating to approximate functions with step functions
+with height equal to function evaluation at the left side of the intevals.
+"""
+struct LeftRule <: IntegrationRule end
