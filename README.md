@@ -53,4 +53,4 @@ Notice that we start from defining the guided proposal `P_intv2` on the second i
 
 ## Additional functionality
 
-Sample with `forward_guide!`, change parameters with `GuidProp(P::GuidProp, θ°, η°)` constructor, recompute ODEs with `backward_filter!` (or `recompute_guiding_term!` if there is only one `GuidProp`), compute log-likelihood with `log_likhd` and `log_likhd_obs`, define a sequence of `GuidProp` objects for a given sequence of observations with `standard_build_guid_prop`. See [documentation](https://JuliaDiffusionBayes.github.io/GuidedProposals.jl/dev) for more details (it is empty now...).
+Sample with `forward_guide!`, change parameters with `GuidProp(P::GuidProp, θ°, η°)` constructor, recompute ODEs with `backward_filter!` (or `recompute_guiding_term!` if there is only one `GuidProp`), compute log-likelihood with `log_likhd` and `log_likhd_obs`, define a sequence of `GuidProp` objects for a given sequence of observations with `standard_build_guid_prop`. See [documentation](https://JuliaDiffusionBayes.github.io/GuidedProposals.jl/dev) for more details.
