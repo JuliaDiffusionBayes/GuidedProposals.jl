@@ -520,7 +520,7 @@ function solve_and_ll!(
     ) where {K,T}
 end
 
-function standard_build_guid_prop(
+function build_guid_prop(
         ::Type{AuxLaw}, recording::NamedTuple, tts::Vector, args...
     ) where {AuxLaw <: DD.DiffusionProcess}
 
@@ -536,6 +536,29 @@ function standard_build_guid_prop(
             ) :
             GuidProp(
                 tts[i], recording.P, AuxLaw, recording.obs[i], args...,;
+                next_guided_prop=GP_temp
+            )
+        )
+    end
+    reverse!(guid_props)
+    guid_props
+end
+
+function build_guid_prop(
+        aux_laws::AbstractArray, recording::NamedTuple, tts::Vector, args
+    )
+    N = length(recording.obs)
+    @assert N == length(tts) == length(args)
+
+    GP_temp = nothing
+    guid_props = map(N:-1:1) do i
+        GP_temp = (
+            i==N ?
+            GuidProp(
+                tts[i], recording.P, aux_laws[i], recording.obs[i], args[i]...,
+            ) :
+            GuidProp(
+                tts[i], recording.P, aux_laws[i], recording.obs[i], args[i]...;
                 next_guided_prop=GP_temp
             )
         )

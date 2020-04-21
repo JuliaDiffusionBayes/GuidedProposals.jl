@@ -26,7 +26,7 @@ makedocs(;
             "BFFG algorithm" => joinpath("overview", "bffg.md"),
             "Convenience functions" => joinpath("overview", "convenience.md"),
         ],
-        "Advance use" => Any[
+        "Advanced use" => Any[
             "ODE systems" => joinpath("advanced_use", "ode_type.md"),
             "Additional options" => joinpath("advanced_use", "additional_options.md"),
         ],

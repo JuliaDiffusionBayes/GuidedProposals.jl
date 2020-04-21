@@ -214,7 +214,7 @@ end
     )
 
     tts = [0.0:0.01:1.0, 1.0:0.01:2.0, 2.0:0.01:3.0]
-    guid_props = standard_build_guid_prop(LotkaVolterraAux, recording, tts)
+    guid_props = build_guid_prop(LotkaVolterraAux, recording, tts)
 
 
     XX = [Trajectory(collect(tts[i]), zeros(SVector{2,Float64}, length(tts[i]))) for i in 1:3]
