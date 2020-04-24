@@ -219,5 +219,5 @@ end
 
     XX = [Trajectory(collect(tts[i]), zeros(SVector{2,Float64}, length(tts[i]))) for i in 1:3]
     WW = [Trajectory(collect(tts[i]), zeros(SVector{2,Float64}, length(tts[i]))) for i in 1:3]
-    forward_guide!(WW, XX, [Wiener(),Wiener(),Wiener()], guid_props, x0)
+    forward_guide!(WW, XX, Wiener(), guid_props, x0)
 end
