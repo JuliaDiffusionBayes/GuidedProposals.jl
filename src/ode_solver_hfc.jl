@@ -214,7 +214,7 @@ function update_HFc!(u_T, u_Tplus, obs)
     L, Λ, Σ, v, μ = DOS.L(obs), DOS.Λ(obs), DOS.Σ(obs), DOS.ν(obs), DOS.μ(obs)
     m, d = size(L)
     u_T.H .= u_Tplus.H + L'*Λ*L
-    u_T.F .= u_Tplus.F + L*Λ*v
+    u_T.F .= u_Tplus.F + L'*Λ*v
     u_T.c .= (u_Tplus.c .+ 0.5*( m*log(2π) + log(det(Σ)) + (v-μ)'*Λ*(v-μ) ))
 end
 
@@ -228,7 +228,7 @@ function update_HFc(u_Tplus, obs, access)
     m, _ = size(L)
     H, F, c = static_accessor_HFc(u_Tplus, access)
     dH = L'*Λ*L
-    dF = L*Λ*v
+    dF = L'*Λ*v
     dc = 0.5*( m*log(2π) + log(det(Σ)) + (v-μ)'*Λ*(v-μ) )
     vcat(SVector(H + dH), (F + dF), SVector(c+dc))
 end

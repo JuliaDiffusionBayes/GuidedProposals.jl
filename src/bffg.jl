@@ -15,7 +15,7 @@ const Mutable = Array
 function forward_guide!(
         WW°::Vector{<:Trajectory},
         XX::Vector{<:Trajectory},
-        Wnr::Vector{<:Wiener},
+        Wnr::Wiener,
         PP::Vector{<:GuidProp},
         x0,
         WW=IndexableNothing(),
@@ -25,7 +25,7 @@ function forward_guide!(
     ll°_tot = 0.0
     for i in 1:num_segments
         success, ll° = forward_guide!(
-            WW°[i], XX[i], Wnr[i], PP[i], x0, WW[i], ρs[i]
+            WW°[i], XX[i], Wnr, PP[i], x0, WW[i], ρs[i]
         )
         success || return false, -Inf
         x0 = XX[i].x[end]
