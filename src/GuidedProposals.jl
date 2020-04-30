@@ -1,23 +1,23 @@
 module GuidedProposals
 
-using DiffEqCallbacks, OrdinaryDiffEq, LinearAlgebra
-using StaticArrays, Random
-using DiffusionDefinition
-using DiffObservScheme
-const DD = DiffusionDefinition
-const DOS = DiffObservScheme
+    using DiffEqCallbacks, OrdinaryDiffEq, LinearAlgebra
+    using StaticArrays, Random, RecursiveArrayTools
+    using DiffusionDefinition
+    using ObservationSchemes
+    const DD = DiffusionDefinition
+    const OBS = ObservationSchemes
 
-include("utility_functions.jl")
-include("containers.jl")
-include("ode_solver_general.jl")
-include("guided_proposals.jl")
-include("ode_solver_hfc.jl")
-include("ode_solver_mlmu.jl")
-include("ode_solver_pnu.jl")
-include("bffg.jl")
+    include("utility_functions.jl")
+    include("containers.jl")
+    include("best_containers.jl")
+    include("ode_solver_general.jl")
+    include("guided_proposals.jl")
+    include("ode_solver_hfc.jl")
+    include("ode_solver_mlmu.jl")
+    include("ode_solver_pnu.jl")
+    include("bffg.jl")
 
-
-export GuidProp, H, F, c, recompute_guiding_term!, build_guid_prop
-export loglikhd, loglikhd_obs
-export forward_guide!, backward_filter!
+    export GuidProp, H, F, c, recompute_guiding_term!, build_guid_prop
+    export loglikhd, loglikhd_obs
+    export forward_guide!, backward_filter!
 end

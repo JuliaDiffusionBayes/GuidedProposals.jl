@@ -34,7 +34,7 @@ for simulation of guided proposals and computation of their likelihood.
                     eltype=Float64,
                 ),
                 next_guided_prop=nothing
-            ) where {R<:DD.DiffusionProcess,TR2<:DD.DiffusionProcess,O<:DOS.Observation}
+            ) where {R<:DD.DiffusionProcess,TR2<:DD.DiffusionProcess,O<:OBS.Observation}
 
     Default constructor. `P_target` and `P_aux` are the target and the type of
     the auxiliary diffusion laws respectively, `tt` is the time-grid on which
@@ -83,15 +83,16 @@ struct GuidProp{K,DP,DW,SS,R,R2,O,S,T} <: DD.DiffusionProcess{K,DP,DW,SS}
                 eltype=Float64,
             );
             next_guided_prop=nothing,
-        ) where {R<:DD.DiffusionProcess,TR2<:DD.DiffusionProcess,O<:DOS.Observation}
+        ) where {R<:DD.DiffusionProcess,TR2<:DD.DiffusionProcess,O<:OBS.Observation}
         @assert tt[end] == obs.t
 
+        #TODO do a more sophisticated unpacking
         P_aux = TR2(
-            DD.parameters(P_target)...,
+            map(x->x[2], DD.parameters(P_target))...,
             tt[1],
             obs.t,
-            deepcopy(DOS.ν(obs)),
-            (obs.full_obs ? deepcopy(DOS.ν(obs)) : tuple() )...
+            deepcopy(OBS.ν(obs)),
+            (obs.full_obs ? deepcopy(OBS.ν(obs)) : tuple() )...
         )
         R2 = typeof(P_aux)
 
@@ -136,7 +137,7 @@ function GuidProp(P::GuidProp, θ°, η°)
     T(
         DD.clone(P.P_target, θ°),
         DD.clone(P.P_aux, θ°),
-        DOS.clone(P.obs, η°),
+        OBS.clone(P.obs, η°),
         P.guiding_term_solver,
     )
 end
@@ -251,7 +252,7 @@ function fetch_xT_plus end
 function fetch_xT_plus(::Val{:inplace}, next_guided_prop, el, dim_of_proc)
     (
         next_guided_prop===nothing ?
-        HFcContainer{el}(dim_of_proc) :
+        HFcContainer(el, dim_of_proc) :
         HFc0(next_guided_prop)
     )
 end

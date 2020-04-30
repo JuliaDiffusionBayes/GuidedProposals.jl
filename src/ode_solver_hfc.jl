@@ -103,7 +103,7 @@ struct HFcSolver{Tmode,Tsv,Ti,TT,T0,Ta} <: AbstractGuidingTermSolver{Tmode}
             # ---
         end
 
-        HFcT = HFcContainer{el}(D)
+        HFcT = HFcContainer(el, D)
         update_HFc!(HFcT, xT_plus, obs)
 
         prob = ODEProblem{true}(
@@ -211,7 +211,7 @@ Update equations for H,F,c at the times of observations. Save the data into
 `u_T`.
 """
 function update_HFc!(u_T, u_Tplus, obs)
-    L, Λ, Σ, v, μ = DOS.L(obs), DOS.Λ(obs), DOS.Σ(obs), DOS.ν(obs), DOS.μ(obs)
+    L, Λ, Σ, v, μ = OBS.L(obs), OBS.Λ(obs), OBS.Σ(obs), OBS.ν(obs), OBS.μ(obs)
     m, d = size(L)
     u_T.H .= u_Tplus.H + L'*Λ*L
     u_T.F .= u_Tplus.F + L'*Λ*v
@@ -224,7 +224,7 @@ end
 Update equations for H,F,c at the times of observations.
 """
 function update_HFc(u_Tplus, obs, access)
-    L, Λ, Σ, v, μ = DOS.L(obs), DOS.Λ(obs), DOS.Σ(obs), DOS.ν(obs), DOS.μ(obs)
+    L, Λ, Σ, v, μ = OBS.L(obs), OBS.Λ(obs), OBS.Σ(obs), OBS.ν(obs), OBS.μ(obs)
     m, _ = size(L)
     H, F, c = static_accessor_HFc(u_Tplus, access)
     dH = L'*Λ*L

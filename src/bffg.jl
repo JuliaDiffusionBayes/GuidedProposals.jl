@@ -44,7 +44,7 @@ function forward_guide!(
         W°::Trajectory, X::Trajectory, Wnr::Wiener, P::GuidProp, x0,
         ::IndexableNothing, ::IndexableNothing,
     )
-    rand!(W°, Wnr)
+    rand!(Wnr, W°)
     solve_and_ll!(X, W°, P, x0)
 end
 

@@ -105,14 +105,6 @@ git-tree-sha1 = "3aadf5d6b987aaec2bb7421aba522df744609960"
 uuid = "459566f4-90b8-5000-8ac3-15dfb0a30def"
 version = "2.12.1"
 
-[[DiffObservScheme]]
-deps = ["Distributions", "GaussianDistributions", "LinearAlgebra", "Random", "StaticArrays"]
-git-tree-sha1 = "ed4789c3c12a956333750e75f069555b2a97b9c7"
-repo-rev = "master"
-repo-url = "https://github.com/JuliaDiffusionBayes/DiffObservScheme.jl"
-uuid = "a6ddd3f2-050f-41aa-9a1f-1d4f9243493f"
-version = "0.1.0"
-
 [[DiffResults]]
 deps = ["StaticArrays"]
 git-tree-sha1 = "da24935df8e0c6cf28de340b958f6aac88eaa0cc"
@@ -126,8 +118,8 @@ uuid = "b552c78f-8df3-52c6-915a-8e097449b14b"
 version = "1.0.1"
 
 [[DiffusionDefinition]]
-deps = ["LinearAlgebra", "MacroTools", "Random", "Reexport", "StaticArrays", "Trajectories"]
-git-tree-sha1 = "3b9b3969a73abb0544ccc542310e8682df51cd82"
+deps = ["ForwardDiff", "LinearAlgebra", "MacroTools", "Random", "RecipesBase", "RecursiveArrayTools", "Reexport", "SparseArrays", "StaticArrays", "Trajectories"]
+git-tree-sha1 = "6d2c3c52e8e56a64ded2374e1c5af190c3cfbd55"
 repo-rev = "master"
 repo-url = "https://github.com/JuliaDiffusionBayes/DiffusionDefinition.jl"
 uuid = "c126fcb9-5a08-4fee-b75a-97eb446288b0"
@@ -186,9 +178,9 @@ version = "1.1.1"
 
 [[GaussianDistributions]]
 deps = ["Distributions", "LinearAlgebra", "Random", "Statistics"]
-git-tree-sha1 = "0f45a5fec81d4b49e44e83d806f2505eada87644"
+git-tree-sha1 = "0cc62997634ce8ce7629eab1028ef2b1cf855d83"
 uuid = "43dcc890-d446-5863-8d1a-14597580bb8d"
-version = "0.4.0"
+version = "0.4.1"
 
 [[GenericSVD]]
 deps = ["LinearAlgebra"]
@@ -299,6 +291,14 @@ version = "4.3.0"
 git-tree-sha1 = "928b8ca9b2791081dc71a51c55347c27c618760f"
 uuid = "77ba4419-2d1f-58cd-9bb1-8ffee604a2e3"
 version = "0.3.3"
+
+[[ObservationSchemes]]
+deps = ["Distributions", "GaussianDistributions", "LinearAlgebra", "Random", "StaticArrays"]
+git-tree-sha1 = "0c437f894b8aeb68b2e9fe48615fff83762a3f06"
+repo-rev = "master"
+repo-url = "https://github.com/JuliaDiffusionBayes/ObservationSchemes.jl"
+uuid = "af94d80e-94fa-4c0b-866a-2d8bf15822bc"
+version = "0.1.0"
 
 [[OpenBLAS_jll]]
 deps = ["CompilerSupportLibraries_jll", "Libdl", "Pkg"]

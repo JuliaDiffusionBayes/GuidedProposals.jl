@@ -1,9 +1,9 @@
-using GuidedProposals, DiffusionDefinition, DiffObservScheme
+using GuidedProposals, DiffusionDefinition, ObservationSchemes
 using OrdinaryDiffEq, StaticArrays
 using ForwardDiff, Random
 using Test
 const DD = DiffusionDefinition
-const DOS = DiffObservScheme
+const OBS = ObservationSchemes
 const GP = GuidedProposals
 
 @testset "GuidedProposals.jl" begin
@@ -48,7 +48,7 @@ const GP = GuidedProposals
             tt = (t0+0.0):0.01:(t0+1.0),
             P_aux = P,
             P_target = LotkaVolterraAux,
-            obs = DOS.LinearGsnObs(t0+1.0, obs; Σ=Σ),
+            obs = OBS.LinearGsnObs(t0+1.0, obs; Σ=Σ),
             solver_choice=(
                 solver=Tsit5(),
                 ode_type=:HFc,
@@ -142,7 +142,7 @@ const GP = GuidedProposals
     tt = reverse(gp2_static.guiding_term_solver.saved_values.t)
     WW = trajectory(tt, SVector{N,Float64})
     wr = Wiener()
-    rand!(WW, wr)
+    rand!(wr, WW)
 
     XX = trajectory(tt, SVector{N,Float64})
     x0 = @SVector [1.0, 2.0]
@@ -159,7 +159,7 @@ const GP = GuidedProposals
             tt = 1.0:0.01:2.0,
             P_target = LotkaVolterraAux(θ..., 0.0,0.0, nothing),
             P_aux_type = LotkaVolterraAux,
-            obs = DOS.LinearGsnObs(2.0, (@SVector [2.0, 3.0]); Σ=SDiagonal(1.0, 1.0)),
+            obs = OBS.LinearGsnObs(2.0, (@SVector [2.0, 3.0]); Σ=SDiagonal(1.0, 1.0)),
             solver_choice=(
                 solver=Tsit5(),
                 ode_type=:HFc,
