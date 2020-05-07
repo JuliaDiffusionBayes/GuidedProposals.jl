@@ -119,7 +119,7 @@ version = "1.0.1"
 
 [[DiffusionDefinition]]
 deps = ["ForwardDiff", "LinearAlgebra", "MacroTools", "Random", "RecipesBase", "RecursiveArrayTools", "Reexport", "SparseArrays", "StaticArrays", "Trajectories"]
-git-tree-sha1 = "6d2c3c52e8e56a64ded2374e1c5af190c3cfbd55"
+git-tree-sha1 = "95020316f5f23f34ec887b79929d2581c2d374c8"
 repo-rev = "master"
 repo-url = "https://github.com/JuliaDiffusionBayes/DiffusionDefinition.jl"
 uuid = "c126fcb9-5a08-4fee-b75a-97eb446288b0"
@@ -294,7 +294,7 @@ version = "0.3.3"
 
 [[ObservationSchemes]]
 deps = ["Distributions", "GaussianDistributions", "LinearAlgebra", "Random", "StaticArrays"]
-git-tree-sha1 = "0c437f894b8aeb68b2e9fe48615fff83762a3f06"
+git-tree-sha1 = "5da632aa97e8e27cc18d3a55fa6784dd2e5e2e2d"
 repo-rev = "master"
 repo-url = "https://github.com/JuliaDiffusionBayes/ObservationSchemes.jl"
 uuid = "af94d80e-94fa-4c0b-866a-2d8bf15822bc"
@@ -302,9 +302,9 @@ version = "0.1.0"
 
 [[OpenBLAS_jll]]
 deps = ["CompilerSupportLibraries_jll", "Libdl", "Pkg"]
-git-tree-sha1 = "2ee3e636e94b9fd95fa8364d5cba2e20dae16609"
+git-tree-sha1 = "1887096f6897306a4662f7c5af936da7d5d1a062"
 uuid = "4536629a-c528-5b80-bd46-f80d51c5b363"
-version = "0.3.9+2"
+version = "0.3.9+4"
 
 [[OpenSpecFun_jll]]
 deps = ["CompilerSupportLibraries_jll", "Libdl", "Pkg"]

@@ -13,10 +13,10 @@ const Mutable = Array
 ===============================================================================#
 
 function forward_guide!(
-        WW°::Vector{<:Trajectory},
-        XX::Vector{<:Trajectory},
+        WW°::AbstractArray{<:Trajectory},
+        XX::AbstractArray{<:Trajectory},
         Wnr::Wiener,
-        PP::Vector{<:GuidProp},
+        PP::AbstractArray{<:GuidProp},
         x0,
         WW=IndexableNothing(),
         ρs=IndexableNothing(),
@@ -52,7 +52,7 @@ end
 function forward_guide!(
         W°::Trajectory, X::Trajectory, Wnr::Wiener, P::GuidProp, x0, W, ρ,
     )
-    rand!(W°, Wnr)
+    rand!(Wnr, W°)
     crank_nicolson!(W°.x, W.x, ρ)
     solve_and_ll!(X, W°, P, x0)
 end

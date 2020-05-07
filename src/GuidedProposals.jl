@@ -12,6 +12,7 @@ module GuidedProposals
     include("best_containers.jl")
     include("ode_solver_general.jl")
     include("guided_proposals.jl")
+    include("reparameterizations.jl")
     include("ode_solver_hfc.jl")
     include("ode_solver_mlmu.jl")
     include("ode_solver_pnu.jl")

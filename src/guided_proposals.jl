@@ -86,13 +86,18 @@ struct GuidProp{K,DP,DW,SS,R,R2,O,S,T} <: DD.DiffusionProcess{K,DP,DW,SS}
         ) where {R<:DD.DiffusionProcess,TR2<:DD.DiffusionProcess,O<:OBS.Observation}
         @assert tt[end] == obs.t
 
-        #TODO do a more sophisticated unpacking
+        all_params = DD.parameters(P_target)
+        epin = DD.end_point_info_names(P_aux_type)
+        pnames = filter(p->!(p in epin), DD.parameter_names(P_aux_type))
+        pvals = map(x->all_params[x], pnames)
+        p_to_pass = [n=>v for (n,v) in zip(pnames, pvals)]
+
         P_aux = TR2(
-            map(x->x[2], DD.parameters(P_target))...,
             tt[1],
             obs.t,
             deepcopy(OBS.ν(obs)),
-            (obs.full_obs ? deepcopy(OBS.ν(obs)) : tuple() )...
+            (obs.full_obs ? deepcopy(OBS.ν(obs)) : tuple() )...;
+            p_to_pass...,
         )
         R2 = typeof(P_aux)
 
@@ -123,23 +128,6 @@ struct GuidProp{K,DP,DW,SS,R,R2,O,S,T} <: DD.DiffusionProcess{K,DP,DW,SS}
 
         new{K,DP,DW,SS,R,R2,O,S,T}(P_target, P_aux, obs, guiding_term_solver)
     end
-end
-
-"""
-    GuidProp(P::GuidProp, θ°, η°)
-
-Create new guided proposals object with new parameters `θ°` parametrizing the
-diffusion laws and `η°` parametrizing the observations. Keep the pre-allocated
-spaces for solvers unchanged.
-"""
-function GuidProp(P::GuidProp, θ°, η°)
-    T = typeof(P)
-    T(
-        DD.clone(P.P_target, θ°),
-        DD.clone(P.P_aux, θ°),
-        OBS.clone(P.obs, η°),
-        P.guiding_term_solver,
-    )
 end
 
 """
