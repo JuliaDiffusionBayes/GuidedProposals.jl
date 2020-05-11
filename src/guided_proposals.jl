@@ -14,48 +14,52 @@
         guiding_term_solver::S
     end
 
-Struct defining `guided proposals` of M Schauer, F van der Meulen and H van
-Zanten. See Mider M, Schauer M and van der Meulen F `Continuous-discrete
-smoothing of diffusions` (2020) for a comprehensive overview of the mathematics
+Struct defining `guided proposals` of *M Schauer, F van der Meulen and H van
+Zanten*. See *Mider M, Schauer M and van der Meulen F* "Continuous-discrete
+smoothing of diffusions" (2020) for a comprehensive overview of the mathematics
 behind this object. It computes and stores the guiding term `∇logρ` and allows
 for simulation of guided proposals and computation of their likelihood.
 
-        GuidProp(
-                tt,
-                P_target::R,
-                P_aux_type::Type{TR2},
-                obs::O,
-                solver_choice=(
-                    solver=Tsit5(),
-                    ode_type=:HFc,
-                    convert_to_HFc=false,
-                    mode=:inplace,
-                    gradients=false,
-                    eltype=Float64,
-                ),
-                next_guided_prop=nothing
-            ) where {R<:DD.DiffusionProcess,TR2<:DD.DiffusionProcess,O<:OBS.Observation}
+    GuidProp(
+            tt,
+            P_target::R,
+            P_aux_type::Type{TR2},
+            obs::O,
+            solver_choice=(
+                solver=Tsit5(),
+                ode_type=:HFc,
+                convert_to_HFc=false,
+                mode=:inplace,
+                gradients=false,
+                eltype=Float64,
+            ),
+            next_guided_prop=nothing
+        ) where {
+            R<:DD.DiffusionProcess,
+            TR2<:DD.DiffusionProcess,
+            O<:OBS.Observation
+        }
 
-    Default constructor. `P_target` and `P_aux` are the target and the type of
-    the auxiliary diffusion laws respectively, `tt` is the time-grid on which
-    `∇logρ` needs to be computed. `obs` is the terminal observation (and the
-    only one on the interval (`tt[1]`, `tt[end]`]). `solver_choice` specifies
-    the type of ODE solver that is to be used for computations of `∇logρ`
-        ( it is a `NamedTuple`, where `solver` specifies the algorithm for
-        solving ODEs (see the documentation of DifferentialEquations.jl for
-        possible choices), `ode_type` picks the ODE system (between :HFc, :MLμ
-        and :Pν), `convert_to_HFc` indicates whether to translate the results of
-        M,L,μ solver to H,F,c objects, `mode` is a flag indicating the way in
-        which data is being handled:
-        - `:inplace`: uses regular arrays to store the data (requires functions
-                      B!, β!, σ! and a! to be defined)
-        - `:outofplace`: operates on static arrays
-        - `:gpu`: operates on GPU arrays [TODO not implemented yet]
-        `gradients` is a flag indicating whether automatic differentiation is to
-        be employed and `eltype` indicates the data-type of each container's
-        member. )
-    Finally, `next_guided_prop` is the guided proposal for the subsequent
-    inter-observation interval.
+Default constructor. `P_target` and `P_aux` are the target and the type of the
+auxiliary diffusion laws respectively, `tt` is the time-grid on which `∇logρ`
+needs to be computed. `obs` is the terminal observation (and the only one on the
+interval (`tt[1]`, `tt[end]`]). `solver_choice` specifies the type of ODE solver
+that is to be used for computations of `∇logρ`
+    ( it is a `NamedTuple`, where `solver` specifies the algorithm for solving
+    ODEs (see the documentation of DifferentialEquations.jl for possible
+    choices), `ode_type` picks the ODE system (between :HFc, :MLμ and :Pν),
+    `convert_to_HFc` indicates whether to translate the results of M,L,μ solver
+    to H,F,c objects, `mode` is a flag indicating the way in which data is being
+    handled:
+    - `:inplace`: uses regular arrays to store the data (requires functions
+                  B!, β!, σ! and a! to be defined)
+    - `:outofplace`: operates on static arrays
+    - `:gpu`: operates on GPU arrays [TODO not implemented yet]
+    `gradients` is a flag indicating whether automatic differentiation is to
+    be employed and `eltype` indicates the data-type of each container's
+    member. )
+Finally, `next_guided_prop` is the guided proposal for the subsequent
+inter-observation interval.
 """
 struct GuidProp{K,DP,DW,SS,R,R2,O,S,T} <: DD.DiffusionProcess{K,DP,DW,SS}
     P_target::R
