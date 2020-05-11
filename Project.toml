@@ -17,11 +17,11 @@ StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 julia = "1.4"
 
 [extras]
-DiffObservScheme = "a6ddd3f2-050f-41aa-9a1f-1d4f9243493f"
+ObservationSchemes = "af94d80e-94fa-4c0b-866a-2d8bf15822bc"
 DiffusionDefinition = "c126fcb9-5a08-4fee-b75a-97eb446288b0"
 ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
-test = ["Test", "ForwardDiff", "Random", "DiffObservScheme", "DiffusionDefinition"]
+test = ["Test", "ForwardDiff", "Random", "ObservationSchemes", "DiffusionDefinition"]
