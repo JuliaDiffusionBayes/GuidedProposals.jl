@@ -318,6 +318,8 @@ indicating time 0+ and tt[end] indicating time T).
 """
 Base.time(P::GuidProp, i) = P.guiding_term_solver.saved_values.t[end-i+1]
 
+Base.time(P::GuidProp) = reverse(P.guiding_term_solver.saved_values.t)
+
 """
     DD.dimension(P::GuidProp)
 
@@ -458,60 +460,9 @@ function loglikhd_obs(P::GuidProp, x0, ::AbstractGuidingTermSolver{:inplace})
     - 0.5 * ( x0'*H(P, 1)*x0 - 2.0*dot(F(P, 1), x₀) ) - c(P, 1)
 end
 
-function solve_and_ll!(XX, WW, P, y1)
-    solve_and_ll!(XX, WW, P, P.guiding_term_solver, y1)
-end
 
-# simulate guided proposals and compute the likelihood at the same time
-function solve_and_ll!(
-        XX::Trajectory{T,Vector{KX}},
-        WW::Trajectory{T,Vector{KW}},
-        P::GuidProp,
-        ::AbstractGuidingTermSolver{:outofplace},
-        y1::KX,
-    ) where {KX,KW,T}
-    yy, ww, tt = XX.x, WW.x, XX.t
-    N = length(XX)
-    ll = 0.0
 
-    yy[1] = y1
-    for i in 1:(N-1)
-        x = yy[i]
-        s = tt[i]
-        dt = tt[i+1] - tt[i]
-        dW = ww[i+1] - ww[i]
 
-        r_i = ∇logρ(i, x, P)
-        b_i = DD.b(s, x, P.P_target)
-        btil_i = DD.b(s, x, P.P_aux)
-
-        σ_i = DD.σ(s, x, P.P_target)
-        a_i = σ_i*σ_i'
-
-        ll += dot(b_i-btil_i, r_i) * dt
-
-        if !DD.constdiff(P)
-            H_i = H(i, x, P)
-            atil_i = DD.a(s, x, P.P_aux)
-            ll += 0.5*tr( (a_i - atil_i)*(r_i*r_i'-H_i') ) * dt
-        end
-
-        yy[i+1] = x + (a_i*r_i + b_i)*dt + σ_i*dW
-
-        DD.bound_satisfied(P, yy[i+1]) || return false, -Inf
-    end
-    true, ll
-end
-
-#NOTE worry about it later
-function solve_and_ll!(
-        XX::Trajectory{T,Vector{Vector{K}}},
-        WW::Trajectory{T,Vector{Vector{K}}},
-        P::GuidProp,
-        ::AbstractGuidingTermSolver{:inplace},
-        y1::Vector{K},
-    ) where {K,T}
-end
 
 function build_guid_prop(
         ::Type{AuxLaw}, recording::NamedTuple, tts::Vector, args...

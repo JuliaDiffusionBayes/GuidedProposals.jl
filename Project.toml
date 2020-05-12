@@ -12,14 +12,15 @@ OrdinaryDiffEq = "1dea7af3-3e70-54e6-95c3-0bf5283fa5ed"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 RecursiveArrayTools = "731186ca-8d62-57ce-b412-fbd966d074cd"
 StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
+Trajectories = "2c80a279-213e-54d7-a557-e9a14725db56"
 
 [compat]
 julia = "1.4"
 
 [extras]
-ObservationSchemes = "af94d80e-94fa-4c0b-866a-2d8bf15822bc"
 DiffusionDefinition = "c126fcb9-5a08-4fee-b75a-97eb446288b0"
 ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
+ObservationSchemes = "af94d80e-94fa-4c0b-866a-2d8bf15822bc"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 

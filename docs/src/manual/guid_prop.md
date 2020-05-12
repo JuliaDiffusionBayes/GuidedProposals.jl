@@ -31,10 +31,10 @@ To define the target law we should make use another package from the [JuliaDiffu
 ## Defining the auxiliary law
 -----------------------------
 When we pass the auxiliary law to `GuidProp` we pass only the name of a struct that defines it and not the actual instance of it. The object will be initialized internally by `GuidProp`. For this reason, the following convention **MUST** be adhered to:
-- the auxiliary law is limited to having the same parameter names as the target law; internally `GuidProp` cycles through all parameters needed by the auxiliary law and looks for the corresponding entry in the target law, using the value of the parameters found there. Importantly the association is done **by name**
+- the auxiliary law is limited to having the same parameter names as the target law; internally `GuidProp` cycles through all parameters needed by the auxiliary law and looks for the corresponding entry in the target law and uses values of the corresponding parameters found there. Importantly, the association is done **by name**
 - in addition to parameters the auxiliary law is expected to have the following fields of the type `:auxiliary_info`:
     - `:t0`
-    - `:T` and
+    - `:T`
     - `:vT`
 Additionally, the field `:xT` will be defined automatically and (if need be) auto-initialized (but can also be declared explicitly).
 
@@ -60,12 +60,13 @@ To define the terminal observation we should make use of another package from th
     $$
     ```julia
     using ObservationSchemes, StaticArrays
-    t, xₜ = 2.0, (@SVector [1.0, 2.0])
-    obs = LinearGsnObs(t, xₜ; Σ = SDiagonal(1.0, 1.0))
+    t, xₜ = 3.0, @SVector [0.5, 0.8]
+    obs = LinearGsnObs(t, xₜ; Σ=1e-4*SDiagonal{2,Float64}(I))
     ```
 
 ## Initializing GuidProp
-It is now possible to define `GuidProp`. We may define the time-grid and then leave the remaining parameters at their defaults. At initialization time a sequence of computations is performed that derive a `guiding term` for `t`'s lying on a pre-specified time-grid `tt`, as well as some additional quantities need for computations of the `log-likelihoods`.
+------------------------
+It is now possible to define `GuidProp`. We may specify the time-grid, and then, leave the remaining parameters at their defaults. At initialization time a sequence of computations is performed that derive a `guiding term` for `t`'s lying on a pre-specified time-grid `tt`, as well as some additional quantities that are needed for computations of the `log-likelihoods`.
 
 !!! tip "Running example—Lotka-Volterra model—defining GuidProp"
 
@@ -79,23 +80,110 @@ It is now possible to define `GuidProp`. We may define the time-grid and then le
     If at any point the parameters change, then the `guiding term` might need to be re-computed (in fact, this is the centerpiece of the `backward filtering` part of the `forward filtering-backward guiding` algorithm). We provide certain utility functions that facilitate these operations. See ... for more details.
 
 
-## Additional options for `GuidProp` definition
-----------------------------------------------
-Additional set of options passed to `GuidProp` are specified in the field `solver_choice`, which by default is set to:
+!!! note
+    Additional set of options passed to `GuidProp` are specified in the field `solver_choice`, which by default is set to:
+
+    ```julia
+    solver_choice=(
+          solver=Tsit5(),
+          ode_type=:HFc,
+          convert_to_HFc=false,
+          mode=:outofplace,
+          gradients=false,
+          eltype=Float64,
+    )
+    ```
+
+    The constructor expects it to be a NamedTuple with the respective fields (but it is robust enough to fill-in any missing fields with defaults). The meaning of the fields is as follows:
+    - `solver` is passed to `DifferentialEquations.jl` to pick an algorithm for solving ODEs that define the guiding term. More about the ODE systems is written in [ODE types](@ref ode_types).
+    - `ode_type` is used to pick between three choices of ODE systems to use: `H`, `F`, `c` system, `M`, `L`, `μ` system and `P`, `ν` (and `c`, but `c` needs to be added to names). They have the labels: `:HFc`, `MLμ`, `Pν` respectively, which are not case sensitive and currently only `HFc` is implemented)
+    - `convert_to_HFc` is used only when `:MLμ` has been chosen to be a solver of ODEs. In that scenario, if `convert_to_HFc` is set to `true`, then the terms `M`, `L`, `μ` that the ODE systems solve for will be used to compute the corresponding `H`, `F`, `c` terms (as opposed to using `:HFc` solver to solve for them)
+    - `mode` is an important flag (currently only `:outofplace` is fully supported) and it is used to tell `GuidProp` what type of computations are being performed: out-of-place `:outofplace`, which are based on `SVector`s from [StaticArrays.jl](https://github.com/JuliaArrays/StaticArrays.jl), in-place `:inplace`, which are based on `Vector`s or `:gpu`, which are based on `cuArray`s.
+    - `gradients` is another important flag for telling `GuidProp` whether gradients with respect to something need to be computed.
+    - `eltype` ignore this for a moment, we need to figure some things out with this...
+
+# Sampling guided proposals
+***************************
+Once `GuidProp` has been initialized, trajectories of guided proposals may be sampled from it.
+
+## Sampling a single trajectory
+-------------------------------
+To sample a single trajectory and initialize appropriate containers in the background call `rand`. Note that `rand` returns two containers (one for the underlying process: `X` and another for the Wiener process: `W`) and a flag for sampling Wiener process `Wnr`. If in-place methods are used then also a buffer is returned. `X`, `W` and `Wnr` may then be used with `rand!` for re-sampling without having to allocate any additional memory.
+
+!!! tip "Running example—Lotka-Volterra model—sampling a single path"
+
+    ```julia
+    x0 = @SVector [2.0, 0.25]
+    X, W, Wnr = rand(P, x0)
+
+    plot(X, Val(:x_vs_y))
+    scatter!([y1[1]],[y1[2]], markersize=8, label="starting point")
+    scatter!([vT[1]],[vT[2]], marker=:diamond, markersize=8, label="conditioned-on point")
+    ```
+    ![lotka_volterra_single_gp](../assets/manual/guid_prop_define/lotka_volterra_single_gp.png)
+
+Alternatively, you may choose to be more explicit: initialize the containers yourself and then call `rand!`. Note however that if the diffusion's state space is not $\RR^d$ you might need to keep re-sampling to make sure the conditions are satisfied.
 ```julia
-solver_choice=(
-      solver=Tsit5(),
-      ode_type=:HFc,
-      convert_to_HFc=false,
-      mode=:outofplace,
-      gradients=false,
-      eltype=Float64,
-)
+# initialize containers
+X, W = trajectory(P)
+# sample the process
+success = false
+while !success
+    success, _ = rand!(P, X, W, x0; Wnr=Wiener())
+end
 ```
-The constructor expects it to be a NamedTuple with the respective fields (but it is robust enough to fill-in any missing fields with defaults). The meaning of the fields is as follows:
-- `solver` is passed to `DifferentialEquations.jl` to pick an algorithm for solving ODEs that define the guiding term. More about the ODE systems is written in the following section.
-- `ode_type` is used to pick between three choices of ODE systems to use: `H`, `F`, `c` system, `M`, `L`, `μ` system and `P`, `ν` (and `c`, but `c` needs to be added to names). They have the labels: `:HFc`, `MLμ`, `Pν` respectively, which are not case sensitive and currently only `HFc` is implemented)
-- `convert_to_HFc` is used only when `:MLμ` has been chosen to be a solver of ODEs. In that scenario, if `convert_to_HFc` is set to `true`, then the terms `M`, `L`, `μ` that the ODE systems solve for will be used to compute the corresponding `H`, `F`, `c` terms (as opposed to using `:HFc` solver to solve for them)
-- `mode` is an important flag (currently only `:outofplace` is fully supported) and it is used to tell `GuidProp` what type of computations are being performed: out-of-place `:outofplace`, which are based on `SVector`s from (StaticArrays.jl)[https://github.com/JuliaArrays/StaticArrays.jl], in-place `:inplace`, which are based on `Vector`s or `:gpu`, which are based on `cuArray`s.
-- `gradients` is another important flag for telling `GuidProp` whether gradients with respect to something need to be computed.
-- `eltype` ignore this for a moment, we need to figure some things out with this...
+
+## Sampling multiple trajectories
+---------------------------------
+Of course, sampling a single trajectory of a guided proposal is usually not the end-goal. We are instead interested in sampling from the target law. To this end we need to not only sample paths, but also compute their log-likelihoods. This can be done in three ways.
+1. First, you may simply call `loglikhd` after the path has been sampled to compute the log-likelihood for it
+2. Second, just as in [DiffusionDefinition.jl](https://juliadiffusionbayes.github.io/DiffusionDefinition.jl/dev/manual/functionals_of_paths/) `rand` and `rand!` accept a named argument `f` which computes path functionals when sampling. A function that computes the log-likelihood may be passed there.
+3. Third—a preferable method—you may call versions of and `rand!` that have optimized versions of log-likelihood computations implemented for them.
+```julia
+success, ll = rand!(P, X, W, Val(:ll), x0; Wnr=Wiener())
+```
+!!! warning
+    `ll` returned by `rand!` is not exactly log-likelihood for the path `XX` and one needs to be careful what is the meaning of it. Study section on ... to find out more.
+
+With these functions we may very easily perform smoothing to obtain samples under the target law:
+```julia
+function simple_smoothing(P, y1)
+	X, W, Wnr = rand(P, y1)
+	X°, W° = trajectory(P)
+
+	ll = loglikhd(X, P)
+	paths = []
+
+	for i in 1:10^4
+		_, ll° = rand!(P, X°, W°, Val(:ll), y1; Wnr=Wnr)
+		if rand() < exp(ll°-ll)
+			X, W, X°, W° = X°, W°, X, W
+			ll = ll°
+		end
+		i % 400 == 0 && append!(paths, [deepcopy(X)])
+	end
+	paths
+end
+paths = simple_smoothing(P, y1)
+```
+which results in
+```julia
+using Plots, Colors
+cm = colormap("RdBu")
+kwargs = (alpha=0.3, label="")
+p = plot(paths[1], Val(:x_vs_y); color=cm[1], kwargs...)
+for (i,x) in enumerate(paths[2:end])
+	plot!(p, x, Val(:x_vs_y); color=cm[4*i], kwargs...)
+end
+display(p)
+```
+![simple_smoothing](../assets/manual/guid_prop_define/lotka_volterra_simple_smoothing.png)
+
+## Preconditioned Crank–Nicolson scheme
+------------------------
+To use the Crank–Nicolson scheme pass additional parameters `W` (the previously accepted Wiener noise) and `ρ` (the memory parameter of the preconditioned Crank–Nicolson scheme to a `rand!` function):
+```julia
+X°, W° = trajectory(P)
+ρ = 0.7
+success, ll° = rand!(P, X°, W°, W, ρ, Val(:ll), y1; Wnr=Wnr)
+```

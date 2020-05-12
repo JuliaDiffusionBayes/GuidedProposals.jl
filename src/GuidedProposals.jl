@@ -1,7 +1,7 @@
 module GuidedProposals
 
     using DiffEqCallbacks, OrdinaryDiffEq, LinearAlgebra
-    using StaticArrays, Random, RecursiveArrayTools
+    using StaticArrays, Random, RecursiveArrayTools, Trajectories
     using DiffusionDefinition
     using ObservationSchemes
     const DD = DiffusionDefinition
@@ -12,6 +12,7 @@ module GuidedProposals
     include("best_containers.jl")
     include("ode_solver_general.jl")
     include("guided_proposals.jl")
+    include("sampling.jl")
     include("reparameterizations.jl")
     include("ode_solver_hfc.jl")
     include("ode_solver_mlmu.jl")
