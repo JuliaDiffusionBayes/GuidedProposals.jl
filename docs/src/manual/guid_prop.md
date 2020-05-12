@@ -138,7 +138,7 @@ end
 Of course, sampling a single trajectory of a guided proposal is usually not the end-goal. We are instead interested in sampling from the target law. To this end we need to not only sample paths, but also compute their log-likelihoods. This can be done in three ways.
 1. First, you may simply call `loglikhd` after the path has been sampled to compute the log-likelihood for it
 2. Second, just as in [DiffusionDefinition.jl](https://juliadiffusionbayes.github.io/DiffusionDefinition.jl/dev/manual/functionals_of_paths/) `rand` and `rand!` accept a named argument `f` which computes path functionals when sampling. A function that computes the log-likelihood may be passed there.
-3. Third—a preferable method—you may call versions of and `rand!` that have optimized versions of log-likelihood computations implemented for them.
+3. Third—a preferable method—you may call versions of `rand!` that have optimized versions of log-likelihood computations implemented for them.
 ```julia
 success, ll = rand!(P, X, W, Val(:ll), x0; Wnr=Wiener())
 ```

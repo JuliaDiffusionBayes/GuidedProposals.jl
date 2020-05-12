@@ -463,7 +463,17 @@ end
 
 
 
+"""
+    build_guid_prop(
+        ::Type{AuxLaw}, recording::NamedTuple, tts::Vector, args...
+    ) where {AuxLaw <: DD.DiffusionProcess}
 
+Initialize multiple instances of `GuidProp` corresponding to guided proposals
+for observations stored in `recording`. The time grids for each
+inter-observation interval is given in `tts` and `AuxLaw` is the auxiliary law
+for creating guided proposals. `args...` are passed to each constructor of
+`GuidProp`.
+"""
 function build_guid_prop(
         ::Type{AuxLaw}, recording::NamedTuple, tts::Vector, args...
     ) where {AuxLaw <: DD.DiffusionProcess}
@@ -488,6 +498,15 @@ function build_guid_prop(
     guid_props
 end
 
+
+"""
+    build_guid_prop(
+        aux_laws::AbstractArray, recording::NamedTuple, tts::Vector, args
+    )
+
+Same as a version with `::Type{AuxLaw}`, but `aux_laws` is a list of auxiliary
+laws that correspond to each inter-observation interval.
+"""
 function build_guid_prop(
         aux_laws::AbstractArray, recording::NamedTuple, tts::Vector, args
     )

@@ -215,12 +215,36 @@ function Base.rand(
         f=DD._DEFAULT_F
     ) where K
     results = map(1:length(PP)) do i
-        result = rand(rng, PP[i], y1, v; f=f)
+        result = rand(rng, PP[i], y1, DD.ismutable(y1); f=f)
         y1 = result[1].x[end]
+        result
     end
     XX = map(r->r[1], results)
     WW = map(r->r[2], results)
     Wnr = results[3][1]
-    f_accum = map(r->r[4], results)
-    XX, WW, Wnr, f_accum
+    typeof(f) != typeof(DD._DEFAULT_F) && return XX, WW, Wnr, map(r->r[4], results)
+    XX, WW, Wnr
 end
+
+#===============================================================================
+                in-place sampling over multiple intervals
+===============================================================================#
+#=
+function Random.rand!(P::AbstractArray{<:GuidProp}, X, W, y1=zero(P); f=DD._DEFAULT_F, Wnr=Wiener())
+    rand!(Random.GLOBAL_RNG, P, X, W, y1, DD.ismutable(y1); f=f, Wnr=Wnr)
+end
+
+function Random.rand!(
+        rng::Random.AbstractRNG,
+        P::AbstractArray{<:GuidProp},
+        X,
+        W,
+        y1::K,
+        v::Val{false};
+        f=DD._DEFAULT_F,
+        Wnr=Wiener(),
+    ) where K
+    rand!(rng, Wnr, W)
+    DD.solve!(X, W, P, y1; f=f)
+end
+=#
