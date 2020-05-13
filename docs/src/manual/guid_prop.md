@@ -1,4 +1,4 @@
-# Defining guided proposals
+# [Defining guided proposals](@id manual_start)
 ***************************
 The main object used to define guided proposals is
 ```@docs
@@ -133,7 +133,7 @@ while !success
 end
 ```
 
-## Sampling multiple trajectories
+## [Sampling multiple trajectories](@id single_obs_multiple_trajectories)
 ---------------------------------
 Of course, sampling a single trajectory of a guided proposal is usually not the end-goal. We are instead interested in sampling from the target law. To this end we need to not only sample paths, but also compute their log-likelihoods. This can be done in three ways.
 1. First, you may simply call `loglikhd` after the path has been sampled to compute the log-likelihood for it
@@ -143,7 +143,7 @@ Of course, sampling a single trajectory of a guided proposal is usually not the 
 success, ll = rand!(P, X, W, Val(:ll), x0; Wnr=Wiener())
 ```
 !!! warning
-    `ll` returned by `rand!` is not exactly log-likelihood for the path `XX` and one needs to be careful what is the meaning of it. Study section on ... to find out more.
+    `ll` returned by `rand!` is not exactly log-likelihood for the path `XX` and one needs to be careful what is the meaning of it. Consult the [section on log-likelihoods](@ref log_likelihood_computations) to find out more.
 
 With these functions we may very easily perform smoothing to obtain samples under the target law:
 ```julia

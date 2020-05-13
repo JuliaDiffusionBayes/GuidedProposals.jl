@@ -25,10 +25,11 @@ makedocs(;
         "User manual" => Any[
             "Guided proposals" => joinpath("manual", "guid_prop.md"),
             "Multiple observations" => joinpath("manual", "multiple_obs.md"),
+            "Log-likelihoods" => joinpath("manual", "log_likelihood.md"),
             "BFFG algorithm" => joinpath("manual", "bffg.md"),
+            "Computing path functionals" => joinpath("manual", "path_functionals.md"),
             "Convenience functions" => joinpath("manual", "convenience.md"),
             "ODE systems" => joinpath("manual", "ode_type.md"),
-            "Additional options" => joinpath("manual", "additional_options.md"),
         ],
         "How to..." => Any[
             "Sample diffusion bridges" => joinpath("how_to_guides", "sample_bridges.md"),
@@ -37,6 +38,7 @@ makedocs(;
             "Do parameter inference" => joinpath("how_to_guides", "parameter_inference.md")
         ],
         "Tutorials" => Any[
+            "Understanding in-place vs out-of-place" => joinpath("tutorials", "in_place_vs_out_of_place.md"),
             "Smoothing/Imputation" => joinpath("tutorials", "smoothing.md"),
             "Parameter inference" => joinpath("tutorials", "parameter_inference.md"),
         ],

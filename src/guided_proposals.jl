@@ -376,7 +376,6 @@ end
 
 ∇logρ(i::Integer, x, P::GuidProp) = ∇logρ(i, x, P.guiding_term_solver)
 
-
 function loglikhd(X::Trajectory, P::GuidProp; skip=0)
     loglikhd(LeftRule(), X, P, P.guiding_term_solver; skip=skip)
 end
@@ -448,6 +447,16 @@ function loglikhd(
     end
     ll
 end
+
+function loglikhd(XX::AbstractArray{<:Trajectory}, PP::AbstractArray{<:GuidProp}; skip=0)
+    lr = LeftRule()
+    ll_tot = 0.0
+    for i in eachindex(XX, PP)
+        ll_tot += loglikhd(lr, XX[i], PP[i], PP[i].guiding_term_solver; skip=skip)
+    end
+    ll_tot
+end
+
 
 loglikhd_obs(P::GuidProp, x0) = loglikhd_obs(P, x0, P.guiding_term_solver)
 

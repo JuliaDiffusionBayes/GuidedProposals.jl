@@ -14,35 +14,27 @@ GuidedProposals.build_guid_prop
 ```
 For instance:
 ```julia
+observs = load_data(
+    ObsScheme(
+        LinearGsnObs(
+            0.0, zero(SVector{2,Float64});
+            Σ = 1e-4*SDiagonal(1.0, 1.0)
+        )
+    ),
+    [1.0, 2.0, 3.0],
+    [[2.2, 0.7], [0.9, 1.0], [0.5, 0.8]]
+)
+
 recording = (
     P = P_target,
-    obs = [
-	    LinearGsnObs(
-	        1.0, (@SVector [2.2, 0.7]);
-	        Σ = 1e-4*SDiagonal(1.0, 1.0)
-	    ),
-	    LinearGsnObs(
-	        2.0, (@SVector [0.9]);
-	        L = (@SMatrix [1.0 0.0]), Σ = 1e-4*SDiagonal(1.0)
-	    ),
-	    LinearGsnObs(
-	        3.0, (@SVector [0.5, 0.8]);
-	        Σ = 1e-4*SDiagonal(1.0, 1.0)
-	    )
-	],
+    obs = observs,
     t0 = 0.0,
     x0_prior = undef # normally, we would provide a prior, however for the steps
     # below it is not needed
 )
+tts = OBS.setup_time_grids(recording, 0.001)
 
-dt = 0.001
-tts = [
-    0.0:dt:(observs[1].t),
-    (observs[1].t):dt:(observs[2].t),
-    (observs[2].t):dt:(observs[3].t),
-]
-
-P = build_guid_prop(LotkaVolterraAux, recording, tts)
+PP = build_guid_prop(LotkaVolterraAux, recording, tts)
 ```
 where we have packaged the observations in a format of a `recording` from [ObservationSchemes.jl](https://github.com/JuliaDiffusionBayes/ObservationSchemes.jl)
 
@@ -58,17 +50,57 @@ where we have packaged the observations in a format of a `recording` from [Obser
     ```julia
     P = [P_intv1, P_intv2, P_intv3]
     ```
-    is equivalent to `P` defined before. Needless to say, calling `build_guid_prop` instead is recommended.
+    is equivalent to `PP` defined before. Needless to say, calling `build_guid_prop` instead is recommended.
 
 ## Sampling a single trajectory
+-------------------------------
 Sampling is done analogously to how it was done for a case of a single observation. Simply call `rand` if you wish to have containers initialized in the background:
 ```julia
-XX, WW, Wnr = rand(P, y1)
+# sample
+XX, WW, Wnr = rand(PP, y1)
+
+# build a plot
+p = plot()
+for i in 1:3
+    plot!(p, XX[i], Val(:x_vs_y); color="steelblue",label="")
+end
+scatter!(p, [y1[1]],[y1[2]], markersize=8, label="starting point")
+for i in 1:3
+	  o = OBS.obs(recording.obs[i])
+    scatter!(p, [o[1]], [o[2]]; label="observation $i", markersize=8, marker=:diamond, markercolor="orange")
+end
+display(p)
 ```
 ![guid_prop_multi](../assets/manual/guid_prop_multi/lotka_volterra_multi_gp.png)
 
-Alternatively, initialize the containers yourself and then call `rand!`:
+Alternatively, initialize containers yourself and then call `rand!`:
 ```julia
-XX, WW = trajectory(P)
-rand!(P, ...)
+XX, WW = trajectory(PP)
+rand!(PP, XX, WW, y1)
+```
+
+## Sampling multiple trajectories
+---------------------------------
+As it was the case with single observation, sampling multiple trajectories often involves computation of the log-likelihood. Analogously to how it was explained in the [previous section](@ref single_obs_multiple_trajectories), there are three ways of computing log-likelihood and the preferred way is to use the optimized `rand!` samplers that compute log-likelihoods as the path is being sampled.
+
+```julia
+success, ll = rand!(PP, XX, WW, Val(:ll), y1)
+```
+
+Smoothing is now as simple as it was for a single observation. In fact, thanks to the magic of Julia's multiple dispatch we may call the exact same function `simple_smoothing` that was defined in the [previous section](@ref single_obs_multiple_trajectories) and it will work for multiple observations as well!
+```julia
+paths = simple_smoothing(P, y1)
+```
+![lotka_volterra_simple_smoothing_multi](../assets/manual/guid_prop_multi/lotka_volterra_simple_smoothing_multi.png)
+
+!!! note
+    A log-likelihood computed by `rand!` for a list of trajectories is slightly different than the log-likelihood computed for a single segment. An additional term due to transition densities is added. See the [section on log-likelihoods](@ref log_likelihood_computations) for more details.
+
+## Preconditioned Crank-Nicolson scheme
+---------------------------------------
+Perturbing Gaussian noise instead of sampling it anew works in exactly the same way as in the previous section.
+```julia
+XX°, WW° = trajectory(PP)
+ρρ = [0.5, 0.8, 0.4] # one memory param for each interval
+rand!(PP, XX°, WW°, WW, ρρ, y1)
 ```

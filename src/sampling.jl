@@ -64,8 +64,8 @@ end
 
 function Trajectories.trajectory(
         PP::AbstractArray{<:GuidProp},
-        v::Type=default_type(P),
-        w::Type=default_wiener_type(P)
+        v::Type=DD.default_type(PP[1]),
+        w::Type=DD.default_wiener_type(PP[1])
     )
     (
         process = [
@@ -81,16 +81,14 @@ end
                 Simple sampling over a single interval
 ===============================================================================#
 
-function Base.rand(P::GuidProp, y1=zero(P); f=DD._DEFAULT_F)
+function Base.rand(P::GuidProp, y1=zero(P); f=DD.__DEFAULT_F)
     rand(Random.GLOBAL_RNG, P, y1, DD.ismutable(y1); f=f)
 end
 
 function Base.rand(
         rng::Random.AbstractRNG,
-        P::GuidProp,
-        y1::K,
-        v::Val{false};
-        f=DD._DEFAULT_F
+        P::GuidProp, y1::K, v::Val{false};
+        f=DD.__DEFAULT_F
     ) where K
     w0 = (
         DD.default_wiener_type(P) <: Number ?
@@ -104,7 +102,7 @@ function Base.rand(
         rand!(rng, Wnr, W, w0)
         success, f_accum = DD.solve!(X, W, P, y1; f=f)
     end
-    typeof(f) != typeof(DD._DEFAULT_F) && return X, W, Wnr, f_accum
+    typeof(f) != DD._DEFAULT_F && return X, W, Wnr, f_accum
     X, W, Wnr
 end
 
@@ -112,80 +110,97 @@ end
                 in-place sampling over a single interval
 ===============================================================================#
 
-function Random.rand!(P::GuidProp, X, W, y1=zero(P); f=DD._DEFAULT_F, Wnr=Wiener())
-    rand!(Random.GLOBAL_RNG, P, X, W, y1, DD.ismutable(y1); f=f, Wnr=Wnr)
+#=---- Vanilla ----=#
+
+function Random.rand!(
+        P::GuidProp,
+        X, W, y1=zero(P);
+        f=DD.__DEFAULT_F, Wnr=Wiener()
+    )
+    rand!(
+        Random.GLOBAL_RNG,
+        P, X, W, y1, DD.ismutable(y1);
+        f=f, Wnr=Wnr
+    )
 end
 
 function Random.rand!(
         rng::Random.AbstractRNG,
         P::GuidProp,
-        X,
-        W,
-        y1::K,
-        v::Val{false};
-        f=DD._DEFAULT_F,
-        Wnr=Wiener(),
+        X, W, y1::K, v::Val{false};
+        f=DD.__DEFAULT_F, Wnr=Wiener(),
     ) where K
     rand!(rng, Wnr, W)
     DD.solve!(X, W, P, y1; f=f)
 end
 
+#=---- with Crank-Nicolson scheme ----=#
 
-function Random.rand!(P::GuidProp, X°, W°, W, ρ, y1=zero(P); f=DD._DEFAULT_F, Wnr=Wiener())
-    rand!(Random.GLOBAL_RNG, P, X°, W°, W, ρ, y1, DD.ismutable(y1); f=f, Wnr=Wnr)
+function Random.rand!(
+        P::GuidProp,
+        X°, W°, W, ρ, y1=zero(P);
+        f=DD.__DEFAULT_F, Wnr=Wiener()
+    )
+    rand!(
+        Random.GLOBAL_RNG,
+        P, X°, W°, W, ρ, y1, DD.ismutable(y1);
+        f=f, Wnr=Wnr
+    )
 end
 
 function Random.rand!(
         rng::Random.AbstractRNG,
         P::GuidProp,
-        X°,
-        W°,
-        W,
-        ρ,
-        y1::K,
-        v::Val{false};
-        f=DD._DEFAULT_F,
-        Wnr=Wiener(),
+        X°, W°, W, ρ, y1::K, v::Val{false};
+        f=DD.__DEFAULT_F, Wnr=Wiener(),
     ) where K
     rand!(rng, Wnr, W°)
     crank_nicolson!(W°.x, W.x, ρ)
     DD.solve!(X°, W°, P, y1; f=f)
 end
 
+#=---- with log-likelihood ----=#
 
-function Random.rand!(P::GuidProp, X, W, v::Val{:ll}, y1=zero(P); Wnr=Wiener())
-    rand!(Random.GLOBAL_RNG, P, X, W, v, y1, DD.ismutable(y1); Wnr=Wnr)
+function Random.rand!(
+        P::GuidProp,
+        X, W, v::Val{:ll}, y1=zero(P);
+        Wnr=Wiener()
+    )
+    rand!(
+        Random.GLOBAL_RNG,
+        P, X, W, v, y1, DD.ismutable(y1);
+        Wnr=Wnr
+    )
 end
 
 function Random.rand!(
         rng::Random.AbstractRNG,
         P::GuidProp,
-        X,
-        W,
-        ::Val{:ll},
-        y1::K,
-        ::Val{false};
+        X, W, ::Val{:ll}, y1::K, ::Val{false};
         Wnr=Wiener(),
     ) where K
     rand!(rng, Wnr, W)
     success, ll = solve_and_ll!(X, W, P, y1)
 end
 
+#=---- with log-likelihood and Crank-Nicolson scheme ----=#
 
-function Random.rand!(P::GuidProp, X°, W°, W, ρ, v::Val{:ll}, y1=zero(P); Wnr=Wiener())
-    rand!(Random.GLOBAL_RNG, P, X°, W°, W, ρ, v, y1, DD.ismutable(y1); Wnr=Wnr)
+function Random.rand!(
+        P::GuidProp,
+        X°, W°, W, ρ, v::Val{:ll}, y1=zero(P);
+        Wnr=Wiener()
+    )
+    rand!(
+        Random.GLOBAL_RNG,
+        P, X°, W°, W, ρ, v, y1, DD.ismutable(y1);
+        Wnr=Wnr
+    )
 end
 
 function Random.rand!(
         rng::Random.AbstractRNG,
         P::GuidProp,
-        X°,
-        W°,
-        W,
-        ρ,
-        ::Val{:ll},
-        y1::K,
-        ::Val{false};
+        X°, W°, W, ρ, ::Val{:ll}, y1::K, ::Val{false};
         Wnr=Wiener(),
     ) where K
     rand!(rng, Wnr, W°)
@@ -198,53 +213,156 @@ end
                 Simple sampling over multiple intervals
 ===============================================================================#
 
-
-
 function Base.rand(
-        P::AbstractArray{<:GuidProp},
-        y1=zero(P[1]);
-        f=DD._DEFAULT_F
+        PP::AbstractArray{<:GuidProp},
+        y1=zero(PP[1]);
+        f=DD.__DEFAULT_F
     )
-    rand(Random.GLOBAL_RNG, P, y1; f=f)
+    rand(Random.GLOBAL_RNG, PP, y1; f=f)
 end
 
 function Base.rand(
         rng::Random.AbstractRNG,
         PP::AbstractArray{<:GuidProp},
         y1::K;
-        f=DD._DEFAULT_F
+        f=DD.__DEFAULT_F
     ) where K
     results = map(1:length(PP)) do i
-        result = rand(rng, PP[i], y1, DD.ismutable(y1); f=f)
+        result = rand(rng, PP[i], y1, DD.ismutable(y1); f=f[i])
         y1 = result[1].x[end]
         result
     end
     XX = map(r->r[1], results)
     WW = map(r->r[2], results)
-    Wnr = results[3][1]
-    typeof(f) != typeof(DD._DEFAULT_F) && return XX, WW, Wnr, map(r->r[4], results)
+    Wnr = results[1][3]
+    typeof(f) != DD._DEFAULT_F && return XX, WW, Wnr, map(r->r[4], results)
     XX, WW, Wnr
 end
 
 #===============================================================================
                 in-place sampling over multiple intervals
 ===============================================================================#
-#=
-function Random.rand!(P::AbstractArray{<:GuidProp}, X, W, y1=zero(P); f=DD._DEFAULT_F, Wnr=Wiener())
-    rand!(Random.GLOBAL_RNG, P, X, W, y1, DD.ismutable(y1); f=f, Wnr=Wnr)
+
+#=---- Vanilla ----=#
+
+function Random.rand!(
+        PP::AbstractArray{<:GuidProp},
+        XX, WW, y1=zero(PP[1]);
+        f=DD.__DEFAULT_F, f_out=DD.__DEFAULT_F, Wnr=Wiener()
+    )
+    rand!(
+        Random.GLOBAL_RNG,
+        PP, XX, WW, y1, DD.ismutable(y1);
+        f=f, f_out=f_out, Wnr=Wnr
+    )
 end
 
 function Random.rand!(
         rng::Random.AbstractRNG,
-        P::AbstractArray{<:GuidProp},
-        X,
-        W,
-        y1::K,
-        v::Val{false};
-        f=DD._DEFAULT_F,
+        PP::AbstractArray{<:GuidProp},
+        XX, WW, y1::K, v::Val{false};
+        f=DD.__DEFAULT_F, f_out=DD.__DEFAULT_F, Wnr=Wiener(),
+    ) where K
+    for i in eachindex(PP)
+        rand!(rng, Wnr, WW[i])
+        success, f_out[i] = DD.solve!(XX[i], WW[i], PP[i], y1; f=f[i])
+        success || return false
+        y1 = XX[i].x[end]
+    end
+    true
+end
+
+#=---- with Crank-Nicolson scheme ----=#
+
+function Random.rand!(
+        PP::AbstractArray{<:GuidProp},
+        XX°, WW°, WW, ρρ, y1=zero(PP[1]);
+        f=DD.__DEFAULT_F, f_out=DD.__DEFAULT_F, Wnr=Wiener()
+    )
+    rand!(
+        Random.GLOBAL_RNG,
+        PP, XX°, WW°, WW, ρρ, y1, DD.ismutable(y1);
+        f=f, f_out=f_out, Wnr=Wnr
+    )
+end
+
+function Random.rand!(
+        rng::Random.AbstractRNG,
+        PP::AbstractArray{<:GuidProp},
+        XX°, WW°, WW, ρρ, y1::K, v::Val{false};
+        f=DD.__DEFAULT_F, f_out=DD.__DEFAULT_F, Wnr=Wiener(),
+    ) where K
+    for i in eachindex(PP)
+        rand!(rng, Wnr, WW°[i])
+        crank_nicolson!(WW°[i].x, WW[i].x, ρρ[i])
+        success, f_out[i] = DD.solve!(XX°[i], WW°[i], PP[i], y1; f=f[i])
+        success || return false
+        y1 = XX°[i].x[end]
+    end
+    true
+end
+
+
+#=---- with log-likelihood ----=#
+
+
+function Random.rand!(
+        PP::AbstractArray{<:GuidProp},
+        XX, WW, v::Val{:ll}, y1=zero(PP[1]);
+        Wnr=Wiener()
+    )
+    rand!(
+        Random.GLOBAL_RNG,
+        PP, XX, WW, v, y1, DD.ismutable(y1);
+        Wnr=Wnr
+    )
+end
+
+function Random.rand!(
+        rng::Random.AbstractRNG,
+        PP::AbstractArray{<:GuidProp},
+        XX, WW, ::Val{:ll}, y1::K, ::Val{false};
         Wnr=Wiener(),
     ) where K
-    rand!(rng, Wnr, W)
-    DD.solve!(X, W, P, y1; f=f)
+    ll_tot = loglikhd_obs(PP[1], y1)
+    for i in eachindex(PP)
+        rand!(rng, Wnr, WW[i])
+        success, ll = solve_and_ll!(XX[i], WW[i], PP[i], y1)
+        success || return false, ll
+        ll_tot += ll
+        y1 = XX[i].x[end]
+    end
+    true, ll_tot
 end
-=#
+
+#=---- with log-likelihood and Crank-Nicolson scheme ----=#
+
+function Random.rand!(
+        PP::AbstractArray{<:GuidProp},
+        XX°, WW°, WW, ρρ, v::Val{:ll}, y1=zero(PP[1]);
+        Wnr=Wiener()
+    )
+    rand!(
+        Random.GLOBAL_RNG,
+        PP, XX°, WW°, WW, ρρ, v, y1, DD.ismutable(y1);
+        Wnr=Wnr
+    )
+end
+
+function Random.rand!(
+        rng::Random.AbstractRNG,
+        PP::AbstractArray{<:GuidProp},
+        XX°, WW°, WW, ρρ, ::Val{:ll}, y1::K, ::Val{false};
+        Wnr=Wiener(),
+    ) where K
+    ll_tot = loglikhd_obs(PP[1], y1)
+    for i in eachindex(PP)
+        rand!(rng, Wnr, WW°[i])
+        crank_nicolson!(WW°[i].x, WW[i].x, ρρ[i])
+        success, ll = solve_and_ll!(XX°[i], WW°[i], PP[i], y1)
+        success || return false, ll
+        ll_tot += ll
+        y1 = XX°[i].x[end]
+    end
+    true, ll_tot
+end

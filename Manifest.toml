@@ -119,7 +119,7 @@ version = "1.0.1"
 
 [[DiffusionDefinition]]
 deps = ["ForwardDiff", "LinearAlgebra", "MacroTools", "Random", "RecipesBase", "RecursiveArrayTools", "Reexport", "SparseArrays", "StaticArrays", "Trajectories"]
-git-tree-sha1 = "c3611ee9bca1853cbdbbf6dbd7978c98788e8dd9"
+git-tree-sha1 = "12868e78117368f2d97d38b5deb2728e51ba77ed"
 repo-rev = "master"
 repo-url = "https://github.com/JuliaDiffusionBayes/DiffusionDefinition.jl"
 uuid = "c126fcb9-5a08-4fee-b75a-97eb446288b0"
