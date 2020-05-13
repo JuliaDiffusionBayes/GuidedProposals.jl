@@ -105,10 +105,14 @@ It is now possible to define `GuidProp`. We may specify the time-grid, and then,
 # Sampling guided proposals
 ***************************
 Once `GuidProp` has been initialized, trajectories of guided proposals may be sampled from it.
+```@docs
+GuidedProposals.rand
+GuidedProposals.rand!
+```
 
 ## Sampling a single trajectory
 -------------------------------
-To sample a single trajectory and initialize appropriate containers in the background call `rand`. Note that `rand` returns two containers (one for the underlying process: `X` and another for the Wiener process: `W`) and a flag for sampling Wiener process `Wnr`. If in-place methods are used then also a buffer is returned. `X`, `W` and `Wnr` may then be used with `rand!` for re-sampling without having to allocate any additional memory.
+To sample a single trajectory and initialize appropriate containers in the background call `rand`. Note that `rand` returns two containers (one for the underlying process: `X` and another for the Wiener process: `W`) and a flag for sampling Wiener process `Wnr`. `X`, `W` and `Wnr` may then be used with `rand!` for re-sampling without having to allocate any additional memory.
 
 !!! tip "Running example—Lotka-Volterra model—sampling a single path"
 
