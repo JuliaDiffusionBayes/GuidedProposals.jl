@@ -14,8 +14,14 @@ makedocs(;
                         :RR => "\\mathbb{R}",
                         :wt => ["\\widetilde{#1}", 1]
                     ),
-                )
-            )
+                    :packages => Dict(
+                        "[+]" => ["color"]
+                    ),
+                ),
+                :loader => Dict(
+                    :load => ["[tex]/color"],
+                ),
+            ),
         ),
         collapselevel = 1,
     ),
@@ -26,6 +32,7 @@ makedocs(;
             "Guided proposals" => joinpath("manual", "guid_prop.md"),
             "Multiple observations" => joinpath("manual", "multiple_obs.md"),
             "Log-likelihoods" => joinpath("manual", "log_likelihood.md"),
+            "Reparameterizations" => joinpath("manual", "reparameterizations.md"),
             "BFFG algorithm" => joinpath("manual", "bffg.md"),
             "Computing path functionals" => joinpath("manual", "path_functionals.md"),
             "Convenience functions" => joinpath("manual", "convenience.md"),

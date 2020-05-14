@@ -6,6 +6,7 @@ module GuidedProposals
     using ObservationSchemes
     const DD = DiffusionDefinition
     const OBS = ObservationSchemes
+    import ObservationSchemes: clone
 
     include("utility_functions.jl")
     include("containers.jl")

@@ -10,20 +10,20 @@
     loglikhd([::IntegrationRule=::LeftRule], X::Trajectory, P::GuidProp; skip=0)
 
 Compute path contribution to the log-likelihood function, i.e.:
-````math
+```math
 \int_0^T G(t, X_t) dt,
-````
+```
 where
-````math
+```math
 G(t,x):=\left[
-    (b-\tilde{b})^T\nabla\tilde{r}
+    (b-\tilde{b})^T\tilde{r}
     + 0.5 tr\left\{
         (a-\tilde{a})(\tilde{r}\tilde{r}^T-H)
     \right\}
 \right](t,x),
-````
+```
 and
-$\tilde{r}(t,x):=\log\rho(t,x)$.
+$\tilde{r}(t,x):=\nabla\log\tilde{\rho}(t,x)$.
 
     loglikhd(
         [::IntegrationRule=::LeftRule],
@@ -130,8 +130,8 @@ end
 @doc raw"""
     loglikhd_obs(P::GuidProp, x0)
 
-Compute end-points contribution to the log-likelihood function, i.e.:
-$\tilde{r}(t,x):=\log\rho(t,x)$.
+Compute the contribution of end-points to the log-likelihood function, i.e.:
+$\log\rho(t,x)$.
 """
 loglikhd_obs(P::GuidProp, x0) = loglikhd_obs(P, x0, P.guiding_term_solver)
 
