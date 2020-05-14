@@ -40,7 +40,17 @@ MathJax.Hub.Config({
     "output/HTML-CSS",
     "output/NativeMML"
   ],
+  "loader": {
+    "load": [
+      "[tex]/color"
+    ]
+  },
   "TeX": {
+    "packages": {
+      "[+]": [
+        "color"
+      ]
+    },
     "equationNumbers": {
       "autoNumber": "AMS"
     },
