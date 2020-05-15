@@ -55,6 +55,18 @@ julia> DD.var_parameters(P_cloned.P_aux) == DD.var_parameters(P_cloned.P_target)
 true
 ```
 
-## Re-computing the guiding term
+## [Re-computing the guiding term](@id recompute_guiding_term)
 -----------------
-Sometimes changing parameter values is all that needs to be done; however, it is not always the case. Sometimes changing parameter values implies that the terms used for computation of the guiding term also need to be updated. To see ...
+Sometimes changing parameter values is all that needs to be done; however, it is not always the case. Often changing parameter values implies that the terms used for computation of the guiding term also need to be updated. This needs to be done whenever any parameter of the auxiliary law or any parameter of an observation has changed. To check whether such parameters have been changed call `critical_parameters_changed` on the last two arguments that were passed to `clone`:
+```@docs
+GuidedProposals.critical_parameters_changed
+```
+
+To actually re-compute the guiding terms and finalize the reparameterization you need to call
+
+```@docs
+GuidedProposals.recompute_guiding_term!
+```
+
+!!! warning
+		If a call to `recompute_guiding_term!` was made on a cloned law `P_cloned` (cloned from the original `P_orig`), then it would not only change the guiding term of `P_cloned`, but also that of `P_orig`. The reason for that is that the call to `clone` simply passes directly to `P_cloned` the same containers for the guiding term solving machinery that were used in `P_orig`.

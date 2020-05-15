@@ -155,7 +155,7 @@ function simple_smoothing(P, y1)
 	X, W, Wnr = rand(P, y1)
 	X°, W° = trajectory(P)
 
-	ll = loglikhd(X, P)
+	ll = loglikhd(P, X)
 	paths = []
 
 	for i in 1:10^4

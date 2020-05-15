@@ -35,7 +35,6 @@ makedocs(;
             "Reparameterizations" => joinpath("manual", "reparameterizations.md"),
             "BFFG algorithm" => joinpath("manual", "bffg.md"),
             "Computing path functionals" => joinpath("manual", "path_functionals.md"),
-            "Convenience functions" => joinpath("manual", "convenience.md"),
             "ODE systems" => joinpath("manual", "ode_type.md"),
         ],
         "How to..." => Any[

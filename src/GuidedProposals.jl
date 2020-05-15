@@ -19,7 +19,6 @@ module GuidedProposals
     include("ode_solver_hfc.jl")
     include("ode_solver_mlmu.jl")
     include("ode_solver_pnu.jl")
-    include("bffg.jl")
 
     export GuidProp, H, F, c, recompute_guiding_term!, build_guid_prop
     export loglikhd, loglikhd_obs

@@ -7,7 +7,7 @@
 ===============================================================================#
 
 @doc raw"""
-    loglikhd([::IntegrationRule=::LeftRule], X::Trajectory, P::GuidProp; skip=0)
+    loglikhd([::IntegrationRule=::LeftRule], P::GuidProp, X::Trajectory; skip=0)
 
 Compute path contribution to the log-likelihood function, i.e.:
 ```math
@@ -27,7 +27,7 @@ $\tilde{r}(t,x):=\nabla\log\tilde{\rho}(t,x)$.
 
     loglikhd(
         [::IntegrationRule=::LeftRule],
-        XX::AbstractArray{<:Trajectory}, PP::AbstractArray{<:GuidProp};
+        PP::AbstractArray{<:GuidProp}, XX::AbstractArray{<:Trajectory};
         skip=0
     )
 Compute path contribution to the log-likelihood function for a sequence of
@@ -35,18 +35,18 @@ segments.
 """
 function loglikhd end
 
-function loglikhd(X::Trajectory, P::GuidProp; skip=0)
-    loglikhd(LeftRule(), X, P, P.guiding_term_solver; skip=skip)
+function loglikhd(P::GuidProp, X::Trajectory; skip=0)
+    loglikhd(LeftRule(), P, X, P.guiding_term_solver; skip=skip)
 end
 
-function loglikhd(ir::IntegrationRule, X::Trajectory, P::GuidProp; skip=0)
-    loglikhd(ir, X, P, P.guiding_term_solver; skip=skip)
+function loglikhd(ir::IntegrationRule, P::GuidProp, X::Trajectory; skip=0)
+    loglikhd(ir, P, X, P.guiding_term_solver; skip=skip)
 end
 
 function loglikhd(
         ::LeftRule,
-        X::Trajectory,
         P::GuidProp,
+        X::Trajectory,
         ::AbstractGuidingTermSolver{:outofplace};
         skip=0
     )
@@ -75,8 +75,8 @@ end
 # NOTE worry about this later...
 function loglikhd(
         ::LeftRule,
-        X::Trajectory,
         P::GuidProp,
+        X::Trajectory,
         ::AbstractGuidingTermSolver{:inplace};
         skip=0
     )
@@ -107,22 +107,22 @@ function loglikhd(
 end
 
 function loglikhd(
-        XX::AbstractArray{<:Trajectory},
-        PP::AbstractArray{<:GuidProp};
+        PP::AbstractArray{<:GuidProp},
+        XX::AbstractArray{<:Trajectory};
         skip=0
     )
-    loglikhd(LeftRule(), XX, PP; skip=skip)
+    loglikhd(LeftRule(), PP, XX; skip=skip)
 end
 
 function loglikhd(
         ir::IntegrationRule,
-        XX::AbstractArray{<:Trajectory},
-        PP::AbstractArray{<:GuidProp};
+        PP::AbstractArray{<:GuidProp},
+        XX::AbstractArray{<:Trajectory};
         skip=0
     )
-    ll_tot = 0.0
+    ll_tot = loglikhd_obs(P, XX[1].x[1])
     for i in eachindex(XX, PP)
-        ll_tot += loglikhd(ir, XX[i], PP[i], PP[i].guiding_term_solver; skip=skip)
+        ll_tot += loglikhd(ir, PP[i], XX[i], PP[i].guiding_term_solver; skip=skip)
     end
     ll_tot
 end

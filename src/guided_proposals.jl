@@ -356,9 +356,21 @@ end
 
 
 """
-"""
-DD.constdiff(P::GuidProp) = DD.constdiff(P.P_target) && DD.constdiff(P.P_aux)
+    recompute_guiding_term!(PP::Vector{<:GuidProp})
 
+Recompute the guiding term for the entire trajectory with all observations (most
+often used after update of parameters or change of an observation).
+"""
+function recompute_guiding_term!(PP::Vector{<:GuidProp})
+    N = length(PP)
+    recompute_guiding_term!(PP[end])
+    for i in (N-1):-1:1
+        recompute_guiding_term!(PP[i], PP[i+1])
+    end
+end
+
+
+DD.constdiff(P::GuidProp) = DD.constdiff(P.P_target) && DD.constdiff(P.P_aux)
 
 DD._σ((t,i)::DD.IndexedTime, x, P::GuidProp) = DD.σ((t,i), x, P.P_target)
 

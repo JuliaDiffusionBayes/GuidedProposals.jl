@@ -25,6 +25,25 @@ function Trajectories.trajectory(
 end
 
 #===============================================================================
+                preconditioned Crank-Nicolson scheme
+===============================================================================#
+const Mutable = Array
+
+function crank_nicolson!(y°, y, ρ) # For immutable types
+    λ = sqrt(1-ρ^2)
+    for i in 1:length(y)
+        y°[i] = λ*y°[i] + ρ*y[i]
+    end
+end
+
+function crank_nicolson!(y°::Vector{T}, y, ρ) where {T<:Mutable} #NOTE GPUs will need to be treated separately
+    λ = sqrt(1-ρ^2)
+    for i in 1:length(y)
+        mul!(y°[i], y[i], true, ρ, λ)
+    end
+end
+
+#===============================================================================
                 Simple sampling over a single interval
 ===============================================================================#
 """
@@ -240,7 +259,7 @@ function Random.rand!(
         Wnr=Wiener(),
     ) where K
     rand!(rng, Wnr, W)
-    success, ll = solve_and_ll!(X, W, P, y1)
+    solve_and_ll!(X, W, P, y1)
 end
 
 function Random.rand!(
@@ -403,7 +422,9 @@ function Random.rand!(
     ) where K
     for i in eachindex(PP)
         rand!(rng, Wnr, WW[i])
-        success, f_out[i] = DD.solve!(XX[i], WW[i], PP[i], y1; f=f[i])
+        success, f_out[i] = rand!(
+            rng, PP[i], XX[i], WW[i], y1, v; f=f[i], Wnr=Wnr
+        )
         success || return false
         y1 = XX[i].x[end]
     end
@@ -467,9 +488,9 @@ function Random.rand!(
         f=DD.__DEFAULT_F, f_out=DD.__DEFAULT_F, Wnr=Wiener(),
     ) where K
     for i in eachindex(PP)
-        rand!(rng, Wnr, WW°[i])
-        crank_nicolson!(WW°[i].x, WW[i].x, ρρ[i])
-        success, f_out[i] = DD.solve!(XX°[i], WW°[i], PP[i], y1; f=f[i])
+        success, f_out[i] = rand!(
+            rng, PP[i], XX°[i], WW°[i], WW[i], ρρ[i], y1, v; f=f[i], Wnr=Wnr
+        )
         success || return false
         y1 = XX°[i].x[end]
     end
@@ -528,13 +549,12 @@ end
 function Random.rand!(
         rng::Random.AbstractRNG,
         PP::AbstractArray{<:GuidProp},
-        XX, WW, ::Val{:ll}, y1::K, ::Val{false};
+        XX, WW, v::Val{:ll}, y1::K, m::Val{false};
         Wnr=Wiener(),
     ) where K
     ll_tot = loglikhd_obs(PP[1], y1)
     for i in eachindex(PP)
-        rand!(rng, Wnr, WW[i])
-        success, ll = solve_and_ll!(XX[i], WW[i], PP[i], y1)
+        success, ll = rand!(rng, PP[i], XX[i], WW[i], v, y1, m; Wnr=Wnr)
         success || return false, ll
         ll_tot += ll
         y1 = XX[i].x[end]
@@ -595,14 +615,14 @@ end
 function Random.rand!(
         rng::Random.AbstractRNG,
         PP::AbstractArray{<:GuidProp},
-        XX°, WW°, WW, ρρ, ::Val{:ll}, y1::K, ::Val{false};
+        XX°, WW°, WW, ρρ, v::Val{:ll}, y1::K, m::Val{false};
         Wnr=Wiener(),
     ) where K
     ll_tot = loglikhd_obs(PP[1], y1)
     for i in eachindex(PP)
-        rand!(rng, Wnr, WW°[i])
-        crank_nicolson!(WW°[i].x, WW[i].x, ρρ[i])
-        success, ll = solve_and_ll!(XX°[i], WW°[i], PP[i], y1)
+        success, ll = rand!(
+            rng, PP[i], XX°[i], WW°[i], WW[i], ρρ[i], v, y1, m; Wnr=Wnr
+        )
         success || return false, ll
         ll_tot += ll
         y1 = XX°[i].x[end]
@@ -619,3 +639,21 @@ function Random.rand!(
     ) where K
     error("in-place not implemented")
 end
+
+
+#===============================================================================
+                                Forward guide
+===============================================================================#
+"""
+alias to rand!
+"""
+const forward_guide! = rand!
+
+
+#===============================================================================
+                                Backward filter
+===============================================================================#
+"""
+alias to `recompute_guiding_term!`
+"""
+const backward_filter! = recompute_guiding_term!

@@ -1,4 +1,4 @@
-# Guided proposals with multiple observations
+# [Guided proposals with multiple observations](@id multi_obs_gp)
 *********************************************
 In practice, it is often of interest to sample from some target diffusion law
 ```math

@@ -11,7 +11,7 @@ laws.
 TODO this is a convenience method that is not really used and doesn't properly
 work yet.
 """
-function ObservationSchemes.clone(P::GuidProp, θ°, η°)
+function OBS.clone(P::GuidProp, θ°, η°)
     T = typeof(P)
     T(
         DD.clone(P.P_target, θ°),
@@ -38,11 +38,58 @@ were just a list of indices, then `θ° = ξ°[θ°idx]`. However, `θ°idx`
 additionally contains parameter names. `η°idx` does the same but for the
 observation. Keeps the pre-allocated spaces for solvers unchanged.
 """
-function ObservationSchemes.clone(P::T, ξ, invcoords, θ°idx, η°idx) where T <: GuidProp
+function OBS.clone(P::T, ξ, invcoords, θ°idx, η°idx) where T <: GuidProp
     T(
         DD.clone(P.P_target, ξ, invcoords, θ°idx, _BY_NAME),
         DD.clone(P.P_aux, ξ, invcoords, θ°idx, _BY_NAME),
         OBS.set_parameters!(P.obs, ξ, η°idx, _BY_POS),
         P.guiding_term_solver,
     )
+end
+
+"""
+    critical_parameter_names(P::GuidProp)
+
+Return a list of parameter names that—if changed—prompt for re-computation
+of a guiding term.
+"""
+critical_parameter_names(P::GuidProp) = critical_parameter_names(typeof(P))
+
+
+"""
+    critical_parameter_names(::Type{T}) where T<:GuidProp
+
+Return a list of parameter names that—if changed—prompt for re-computation
+of a guiding term.
+"""
+function critical_parameter_names(
+        ::Type{P}
+    ) where {P<:GuidProp{K,DP,DW,SS,R,R2,O,S,T}} where {K,DP,DW,SS,R,R2,O,S,T}
+    DD.var_parameter_names(R2)
+end
+
+"""
+    critical_parameters_changed(P::GuidProp, θ°idx, η°idx)
+
+Return a boolean flag for whether the changed parameters (listed in `θ°idx` and
+`η°idx`) prompt for re-computation of the guiding term.
+"""
+function critical_parameters_changed(P::GuidProp, θ°idx, η°idx)
+    critical_parameters_changed(typeof(P), θ°idx, η°idx)
+end
+
+"""
+    critical_parameters_changed(_P_type::Type{<:GuidProp}, θ°idx, η°idx)
+
+Return a boolean flag for whether the changed parameters (listed in `θ°idx` and
+`η°idx`) prompt for re-computation of the guiding term.
+"""
+function critical_parameters_changed(_P_type::Type{<:GuidProp}, θ°idx, η°idx)
+    length(η°idx) == 0 || return true
+    critical_p = critical_parameter_names(_P_type)
+
+    for i in θ°idx
+        i.pname in critical_p && return true
+    end
+    false
 end
