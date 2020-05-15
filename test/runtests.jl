@@ -151,7 +151,7 @@ const GP = GuidedProposals
     #[TODO move to DiffusionDefinition.jl]
     #@inline DD.constdiff(P::LotkaVolterraAux) = true
 
-    loglikhd(XX, gp2_static)
+    loglikhd(gp2_static, XX)
     loglikhd_obs(gp2_static, x0)
 
     function foo(θ)
