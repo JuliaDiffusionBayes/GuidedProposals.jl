@@ -120,7 +120,7 @@ function loglikhd(
         XX::AbstractArray{<:Trajectory};
         skip=0
     )
-    ll_tot = loglikhd_obs(P, XX[1].x[1])
+    ll_tot = loglikhd_obs(PP[1], XX[1].x[1])
     for i in eachindex(XX, PP)
         ll_tot += loglikhd(ir, PP[i], XX[i], PP[i].guiding_term_solver; skip=skip)
     end
@@ -148,7 +148,7 @@ end
             solve! with simultaneous computation of log-likelihood
 ===============================================================================#
 """
-    solve_and_ll!(XX, WW, P, y1)
+    solve_and_ll!(X, W, P, y1)
 
 Compute the trajectory under the law `P` for a given Wiener noise `W` and
 a starting point `y1`. Store the trajectory in `XX`. Compute the log-likelihood
@@ -156,8 +156,19 @@ a starting point `y1`. Store the trajectory in `XX`. Compute the log-likelihood
 `success_flag` is set to false only if sampling was prematurely halted due to
 `XX` violating assumptions about state space.
 """
-function solve_and_ll!(XX, WW, P, y1)
-    solve_and_ll!(XX, WW, P, P.guiding_term_solver, y1)
+function solve_and_ll!(X, W, P::GuidProp, y1)
+    solve_and_ll!(X, W, P, P.guiding_term_solver, y1)
+end
+
+function solve_and_ll!(XX, WW, PP::AbstractArray{<:GuidProp}, y1)
+    ll_tot = loglikhd_obs(PP[1], y1)
+    for i in eachindex(PP)
+        success, ll = solve_and_ll!(XX[i], WW[i], PP[i], PP[i].guiding_term_solver, y1)
+        success || return false, ll
+        ll_tot += ll
+        y1 = XX[i].x[end]
+    end
+    true, ll_tot
 end
 
 function solve_and_ll!(

@@ -35,17 +35,17 @@ makedocs(;
             "Reparameterizations" => joinpath("manual", "reparameterizations.md"),
             "BFFG algorithm" => joinpath("manual", "bffg.md"),
             "Computing path functionals" => joinpath("manual", "path_functionals.md"),
-            "ODE systems" => joinpath("manual", "ode_type.md"),
+            "(TODO) ODE systems" => joinpath("manual", "ode_type.md"),
         ],
         "How to..." => Any[
-            "Sample diffusion bridges" => joinpath("how_to_guides", "sample_bridges.md"),
-            "Sample diffusions in first-passage time setting" => joinpath("how_to_guides", "first_passage_time.md"),
-            "Do smoothing" => joinpath("how_to_guides", "smoothing.md"),
-            "Do parameter inference" => joinpath("how_to_guides", "parameter_inference.md")
+            "(TODO) Sample diffusion bridges" => joinpath("how_to_guides", "sample_bridges.md"),
+            "(TODO) Sample diffusions in first-passage time setting" => joinpath("how_to_guides", "first_passage_time.md"),
+            "(TODO) Do smoothing" => joinpath("how_to_guides", "smoothing.md"),
+            "(TODO) Do parameter inference" => joinpath("how_to_guides", "parameter_inference.md")
         ],
         "Tutorials" => Any[
-            "Understanding in-place vs out-of-place" => joinpath("tutorials", "in_place_vs_out_of_place.md"),
-            "Smoothing/Imputation" => joinpath("tutorials", "smoothing.md"),
+            "(TODO) Understanding in-place vs out-of-place" => joinpath("tutorials", "in_place_vs_out_of_place.md"),
+            "(TODO) Smoothing/Imputation" => joinpath("tutorials", "smoothing.md"),
             "Parameter inference" => joinpath("tutorials", "parameter_inference.md"),
         ],
         "Index" => "module_index.md",

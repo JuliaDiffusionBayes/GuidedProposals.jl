@@ -69,4 +69,4 @@ GuidedProposals.recompute_guiding_term!
 ```
 
 !!! warning
-		If a call to `recompute_guiding_term!` was made on a cloned law `P_cloned` (cloned from the original `P_orig`), then it would not only change the guiding term of `P_cloned`, but also that of `P_orig`. The reason for that is that the call to `clone` simply passes directly to `P_cloned` the same containers for the guiding term solving machinery that were used in `P_orig`.
+    If a call to `recompute_guiding_term!` was made on a cloned law `P_cloned` (cloned from the original `P_orig`), then it would not only change the guiding term of `P_cloned`, but also that of `P_orig`. The reason for that is that the call to `clone` simply passes directly to `P_cloned` the same containers for the guiding term solving machinery that were used in `P_orig`.

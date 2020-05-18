@@ -69,7 +69,8 @@ struct HFcSolver{Tmode,Tsv,Ti,TT,T0,Ta} <: AbstractGuidingTermSolver{Tmode}
             # ---
             # current state
             H, F, c = u.H, u.F, u.c
-            B, β, σ, a, tmat, tvec = p.B, p.β, p.σ, p.a, p.mat, p.vec
+            B, β, σ, a, tmat = p.buf.B, p.buf.β, p.buf.σ, p.buf.a, p.buf.mat
+            tvec, P = p.buf.vec, p.P
             # increments (to-be-computed by this function)
             dH, dF, dc = du.H, du.F, du.c
             # ---
@@ -110,7 +111,10 @@ struct HFcSolver{Tmode,Tsv,Ti,TT,T0,Ta} <: AbstractGuidingTermSolver{Tmode}
             HFc_update!,
             HFcT,
             (tt[end], tt[1]),
-            HFcBuffer{el}(D)
+            (
+                buf = HFcBuffer{el}(D),
+                P = P,
+            )
         )
         saved_values = SavedValues(Float64, Tuple{Matrix{el},Vector{el},el})
         callback = SavingCallback(
@@ -153,7 +157,8 @@ struct HFcSolver{Tmode,Tsv,Ti,TT,T0,Ta} <: AbstractGuidingTermSolver{Tmode}
             choices
         )
         access = Val{DiffusionDefinition.dimension(P).process}()
-        function HFc_update(u, p, t)
+
+        function HFc_update(u, P, t)
             H, F, c = static_accessor_HFc(u, access)
             _B, _β, _σ, _a = DD.B(t, P), DD.β(t, P), DD.σ(t, P), DD.a(t, P)
 
@@ -168,7 +173,8 @@ struct HFcSolver{Tmode,Tsv,Ti,TT,T0,Ta} <: AbstractGuidingTermSolver{Tmode}
         prob = ODEProblem{false}(
             HFc_update,
             update_HFc(xT_plus, obs, access),
-            (tt[end], tt[1])
+            (tt[end], tt[1]),
+            P
         )
         saved_values = SavedValues(Float64, Tuple{TH,TF,Tc})
         callback = SavingCallback(
@@ -196,6 +202,7 @@ struct HFcSolver{Tmode,Tsv,Ti,TT,T0,Ta} <: AbstractGuidingTermSolver{Tmode}
         )
     end
 end
+
 
 """
     HFc0(s::HFcSolver)

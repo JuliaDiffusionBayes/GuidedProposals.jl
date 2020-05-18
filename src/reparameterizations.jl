@@ -11,14 +11,21 @@ laws.
 TODO this is a convenience method that is not really used and doesn't properly
 work yet.
 """
-function OBS.clone(P::GuidProp, θ°, η°)
-    T = typeof(P)
+function OBS.clone(P::T, θ°, η°) where T <: GuidProp
+    P_aux = DD.clone(P.P_aux, θ°)
+    P.guiding_term_solver.integrator.p = P_aux #NOTE let's force out-of-place for a moment
     T(
         DD.clone(P.P_target, θ°),
-        DD.clone(P.P_aux, θ°),
-        OBS.clone(P.obs, η°),
+        P_aux,
+        OBS.set_parameters!(P.obs, η°),
         P.guiding_term_solver,
     )
+end
+
+function clone!(PP::AbstractArray{<:GuidProp}, θ°, η°)
+    for i in eachindex(PP)
+        PP[i] = OBS.clone(PP[i], θ°, η°)
+    end
 end
 
 const _BY_NAME = Val(:associate_by_name)
@@ -39,11 +46,14 @@ additionally contains parameter names. `η°idx` does the same but for the
 observation. Keeps the pre-allocated spaces for solvers unchanged.
 """
 function OBS.clone(P::T, ξ, invcoords, θ°idx, η°idx) where T <: GuidProp
+    P_aux = DD.clone(P.P_aux, ξ, invcoords, θ°idx, _BY_NAME)
+    P.guiding_term_solver.prob.p = P_aux
+    P.guiding_term_solver.p = P_aux
     T(
         DD.clone(P.P_target, ξ, invcoords, θ°idx, _BY_NAME),
-        DD.clone(P.P_aux, ξ, invcoords, θ°idx, _BY_NAME),
+        P_aux,
         OBS.set_parameters!(P.obs, ξ, η°idx, _BY_POS),
-        P.guiding_term_solver,
+        P.guiding_term_solver, #NOTE let's force out-of-place for a moment
     )
 end
 
