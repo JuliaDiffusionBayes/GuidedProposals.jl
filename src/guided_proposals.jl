@@ -67,6 +67,7 @@ struct GuidProp{K,DP,DW,SS,R,R2,O,S,T} <: DD.DiffusionProcess{K,DP,DW,SS}
     obs::O
     guiding_term_solver::S
 
+    #TODO deprecate
     function GuidProp{K,DP,DW,SS,R,R2,O,S,T}(
             P_target::R, P_aux::R2, obs::O, guiding_term_solver::S
         ) where {K,DP,DW,SS,R,R2,O,S,T}
@@ -75,7 +76,7 @@ struct GuidProp{K,DP,DW,SS,R,R2,O,S,T} <: DD.DiffusionProcess{K,DP,DW,SS}
 
     function GuidProp(
             tt,
-            P_target::R,
+            _P_target::R,
             P_aux_type::Type{TR2},
             obs::O,
             solver_choice=(
@@ -90,6 +91,7 @@ struct GuidProp{K,DP,DW,SS,R,R2,O,S,T} <: DD.DiffusionProcess{K,DP,DW,SS}
         ) where {R<:DD.DiffusionProcess,TR2<:DD.DiffusionProcess,O<:OBS.Observation}
         @assert tt[end] == obs.t
 
+        P_target = deepcopy(_P_target)
         all_params = DD.parameters(P_target)
         epin = DD.end_point_info_names(P_aux_type)
         pnames = filter(p->!(p in epin), DD.parameter_names(P_aux_type))
@@ -361,7 +363,7 @@ end
 Recompute the guiding term for the entire trajectory with all observations (most
 often used after update of parameters or change of an observation).
 """
-function recompute_guiding_term!(PP::Vector{<:GuidProp})
+function recompute_guiding_term!(PP::AbstractArray{<:GuidProp})
     N = length(PP)
     recompute_guiding_term!(PP[end])
     for i in (N-1):-1:1
@@ -455,3 +457,19 @@ function build_guid_prop(
     reverse!(guid_props)
     guid_props
 end
+
+
+DD.var_parameter_names(P::GuidProp) = DD.var_parameter_names(P.P_target)
+
+function DD.var_parameter_names(PP::AbstractArray{<:GuidProp})
+    DD.var_parameter_names(PP[1])
+end
+
+function DD.var_parameter_names(
+        P::Type{<:GuidProp{K,DP,DW,SS,R}}
+    ) where {K,DP,DW,SS,R}
+    DD.var_parameter_names(R)
+end
+
+DD.var_parameters(P::GuidProp) = DD.var_parameters(P.P_target)
+DD.var_parameters(PP::AbstractArray{<:GuidProp}) = DD.var_parameters(PP[1])

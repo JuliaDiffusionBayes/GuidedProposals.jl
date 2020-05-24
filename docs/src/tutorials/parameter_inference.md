@@ -61,9 +61,9 @@ recording = (
 
 ```julia
 # define a simple transition kernel
-function customkernel(θ, ::Val{T}, scale=0.1) where T
+function customkernel(θ, s::Symbol, scale=0.1)
 	θ° = deepcopy(θ)
-	θ°[T] += 2.0*scale*(rand()-0.5)
+	θ°[s] += 2.0*scale*(rand()-0.5)
 	θ°
 end
 
@@ -96,9 +96,9 @@ function simple_inference(AuxLaw, recording, dt, θ; ρ=0.5, num_steps=10^4)
 			imp_a_r += 1
 		end
 
-		# update parameter ϵ
-		θ° = customkernel(θ, Val(:s), 0.3)
-		GP.clone!(PP°, θ°, [])
+		# update parameter s
+		θ° = customkernel(θ, :s, 0.3)
+		DD.set_parameters!(PP°, θ°)
 		recompute_guiding_term!(PP°)
 		_, ll° = GP.solve_and_ll!(XX°, WW, PP°, y1)
 
