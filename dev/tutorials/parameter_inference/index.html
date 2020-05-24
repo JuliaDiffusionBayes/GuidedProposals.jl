@@ -31,9 +31,9 @@ recording = (
 	t0 = 0.0,
 	x0_prior = KnownStartingPt(y1),
 )</code></pre><h2 id="Inference-algorithm-1"><a class="docs-heading-anchor" href="#Inference-algorithm-1">Inference algorithm</a><a class="docs-heading-anchor-permalink" href="#Inference-algorithm-1" title="Permalink"></a></h2><pre><code class="language-julia"># define a simple transition kernel
-function customkernel(θ, ::Val{T}, scale=0.1) where T
+function customkernel(θ, s::Symbol, scale=0.1)
 	θ° = deepcopy(θ)
-	θ°[T] += 2.0*scale*(rand()-0.5)
+	θ°[s] += 2.0*scale*(rand()-0.5)
 	θ°
 end
 
@@ -66,9 +66,9 @@ function simple_inference(AuxLaw, recording, dt, θ; ρ=0.5, num_steps=10^4)
 			imp_a_r += 1
 		end
 
-		# update parameter ϵ
-		θ° = customkernel(θ, Val(:s), 0.3)
-		GP.clone!(PP°, θ°, [])
+		# update parameter s
+		θ° = customkernel(θ, :s, 0.3)
+		DD.set_parameters!(PP°, θ°)
 		recompute_guiding_term!(PP°)
 		_, ll° = GP.solve_and_ll!(XX°, WW, PP°, y1)
 
@@ -108,4 +108,4 @@ for path in paths[end-10:end]
 	end
 end
 scatter!(p, map(x-&gt;x[1], data), map(x-&gt;x[2], data), label=&quot;data&quot;)
-display(p)</code></pre><p><img src="../../assets/tutorials/parameter_inference/paths.png" alt="paths"/></p><div class="admonition is-success"><header class="admonition-header">Tip</header><div class="admonition-body"><p>Adjusting the code presented in this tutorial to other diffusion processes, observation schemes or flavors of MCMC algorithm should be fairly straightforward, albeit can become tedious. Package <a href="https://github.com/JuliaDiffusionBayes/DiffusionMCMC.jl/dev">DiffusionMCMC.jl</a> (currently under development) has been designed precisely with this in mind and aims to remove the unnecessary, tedious work from the user when performing MCMC inference.</p></div></div></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../smoothing/">« (TODO) Smoothing/Imputation</a><a class="docs-footer-nextpage" href="../../module_index/">Index »</a></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Monday 18 May 2020 10:44">Monday 18 May 2020</span>. Using Julia version 1.4.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+display(p)</code></pre><p><img src="../../assets/tutorials/parameter_inference/paths.png" alt="paths"/></p><div class="admonition is-success"><header class="admonition-header">Tip</header><div class="admonition-body"><p>Adjusting the code presented in this tutorial to other diffusion processes, observation schemes or flavors of MCMC algorithm should be fairly straightforward, albeit can become tedious. Package <a href="https://github.com/JuliaDiffusionBayes/DiffusionMCMC.jl/dev">DiffusionMCMC.jl</a> (currently under development) has been designed precisely with this in mind and aims to remove the unnecessary, tedious work from the user when performing MCMC inference.</p></div></div></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../smoothing/">« (TODO) Smoothing/Imputation</a><a class="docs-footer-nextpage" href="../../module_index/">Index »</a></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Sunday 24 May 2020 15:27">Sunday 24 May 2020</span>. Using Julia version 1.4.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
