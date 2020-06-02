@@ -388,3 +388,5 @@ function DD.set_parameters!(PP::AbstractArray{<:GuidProp}, θ°::Dict)
         DD.set_parameters!(PP[i], θ°)
     end
 end
+
+set_aux_obs!(P::GuidProp, obs) = (P.aux_obs.obs .= obs)

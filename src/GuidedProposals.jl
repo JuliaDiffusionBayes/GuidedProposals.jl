@@ -23,4 +23,5 @@ module GuidedProposals
     export GuidProp, H, F, c, recompute_guiding_term!, build_guid_prop
     export loglikhd, loglikhd_obs
     export forward_guide!, backward_filter!
+    export BlockingMode, set_aux_obs!
 end

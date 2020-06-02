@@ -6,11 +6,12 @@
 #==============================================================================#
 """
     struct GuidProp{
-            K,DP,DW,SS,R,R2,O,S,T
+            K,DP,DW,SS,R,R2,O,AO,S,T
             } <: DiffusionDefinition.DiffusionProcess{K,DP,DW,SS}
         P_target::R
         P_aux::R2
         obs::O
+        aux_obs::AO
         guiding_term_solver::S
     end
 
@@ -33,7 +34,8 @@ for simulation of guided proposals and computation of their likelihood.
                 gradients=false,
                 eltype=Float64,
             ),
-            next_guided_prop=nothing
+            next_guided_prop=nothing,
+            artifical_noise=1e-11,
         ) where {
             R<:DD.DiffusionProcess,
             TR2<:DD.DiffusionProcess,
@@ -59,19 +61,26 @@ that is to be used for computations of `∇logρ`
     be employed and `eltype` indicates the data-type of each container's
     member. )
 Finally, `next_guided_prop` is the guided proposal for the subsequent
-inter-observation interval.
+inter-observation interval. `artifical_noise` is only used for blocking, in
+conjuction with the field `aux_obs`, which holds an auxiliary observation. The
+former denotes the level of artificial noise that needs to be added on to an
+otherwise exact observation. The latter field is used for holding the said
+observation.
 """
-struct GuidProp{K,DP,DW,SS,R,R2,O,S,T} <: DD.DiffusionProcess{K,DP,DW,SS}
+struct GuidProp{K,DP,DW,SS,R,R2,O,AO,S,T} <: DD.DiffusionProcess{K,DP,DW,SS}
     P_target::R
     P_aux::R2
     obs::O
+    aux_obs::AO
     guiding_term_solver::S
 
     #TODO deprecate
-    function GuidProp{K,DP,DW,SS,R,R2,O,S,T}(
-            P_target::R, P_aux::R2, obs::O, guiding_term_solver::S
-        ) where {K,DP,DW,SS,R,R2,O,S,T}
-        new{K,DP,DW,SS,R,R2,O,S,T}(P_target, P_aux, obs, guiding_term_solver)
+    function GuidProp{K,DP,DW,SS,R,R2,O,AO,S,T}(
+            P_target::R, P_aux::R2, obs::O, aux_obs::AO, guiding_term_solver::S
+        ) where {K,DP,DW,SS,R,R2,O,AO,S,T}
+        new{K,DP,DW,SS,R,R2,O,AO,S,T}(
+            P_target, P_aux, obs, aux_obs, guiding_term_solver
+        )
     end
 
     function GuidProp(
@@ -88,6 +97,7 @@ struct GuidProp{K,DP,DW,SS,R,R2,O,S,T} <: DD.DiffusionProcess{K,DP,DW,SS}
                 eltype=Float64,
             );
             next_guided_prop=nothing,
+            artifical_noise=1e-11,
         ) where {R<:DD.DiffusionProcess,TR2<:DD.DiffusionProcess,O<:OBS.Observation}
         @assert tt[end] == obs.t
 
@@ -126,15 +136,35 @@ struct GuidProp{K,DP,DW,SS,R,R2,O,S,T} <: DD.DiffusionProcess{K,DP,DW,SS}
             Val{choices_now.convert_to_HFc}(),
             params...
         )
+
+        proto_obs = proto_mutable_obs(guiding_term_solver)
+        aux_obs = build_aux_obs(obs, proto_obs, artifical_noise)
+
         S = typeof(guiding_term_solver)
         T = choices_now.ode_type
 
         DP, DW = DD.dimension(P_target)
         K, SS = eltype(P_target), DD.state_space(P_target)
+        AO = typeof(aux_obs)
 
-        new{K,DP,DW,SS,R,R2,O,S,T}(P_target, P_aux, obs, guiding_term_solver)
+        new{K,DP,DW,SS,R,R2,O,AO,S,T}(
+            P_target, P_aux, obs, aux_obs, guiding_term_solver
+        )
     end
 end
+
+function build_aux_obs(obs, proto_obs, ϵ)
+    mut = OBS.ismutable(obs.obs)
+    LinearGsnObs(
+        obs.t,
+        proto_obs;
+        Σ = OBS._default_Σ(proto_obs, mut, ϵ),
+        L = OBS._default_L(proto_obs, mut),
+        μ = OBS._default_μ(proto_obs, mut),
+        full_obs=true
+    )
+end
+
 
 """
     reformat(solver_choice::NamedTuple, last_interval::Bool, P_aux)
@@ -339,23 +369,36 @@ remove].
 """
 mode(P::GuidProp) =  mode(P.guiding_term_solver)
 
+struct NoBlockingMode end
+struct BlockingMode end
+const _NOBLOCKING = NoBlockingMode()
+
 """
-    recompute_guiding_term!(P::GuidProp, next_guided_prop=nothing)
+    recompute_guiding_term!(P::GuidProp, next_guided_prop=nothing;  blocking=_NOBLOCKING)
 
 Recompute the guiding term (most often used after update of parameters or change
 of an observation). `next_guided_prop` is the guided proposal law from the
 subsequent interval
 """
-function recompute_guiding_term!(P::GuidProp, next_guided_prop=nothing)
+function recompute_guiding_term!(
+        P::GuidProp, next_guided_prop=nothing; blocking=_NOBLOCKING
+    )
     xT_plus = fetch_xT_plus(
         Val{mode(P)}(),
         next_guided_prop,
         eltype(HFc0(P)),
         DD.dimension(P).process
     )
+    _recompute_guiding_term!(P, xT_plus, blocking)
+end
+
+function _recompute_guiding_term!(P::GuidProp, xT_plus, ::NoBlockingMode)
     recompute_guiding_term!(P.guiding_term_solver, P.P_aux, P.obs, xT_plus)
 end
 
+function _recompute_guiding_term!(P::GuidProp, xT_plus, ::BlockingMode)
+    recompute_guiding_term!(P.guiding_term_solver, P.P_aux, P.aux_obs, xT_plus)
+end
 
 """
     recompute_guiding_term!(PP::Vector{<:GuidProp})
@@ -363,9 +406,9 @@ end
 Recompute the guiding term for the entire trajectory with all observations (most
 often used after update of parameters or change of an observation).
 """
-function recompute_guiding_term!(PP::AbstractArray{<:GuidProp})
+function recompute_guiding_term!(PP::AbstractArray{<:GuidProp}; blocking=_NOBLOCKING)
     N = length(PP)
-    recompute_guiding_term!(PP[end])
+    recompute_guiding_term!(PP[end]; blocking=blocking)
     for i in (N-1):-1:1
         recompute_guiding_term!(PP[i], PP[i+1])
     end
@@ -375,6 +418,8 @@ end
 DD.constdiff(P::GuidProp) = DD.constdiff(P.P_target) && DD.constdiff(P.P_aux)
 
 DD._σ((t,i)::DD.IndexedTime, x, P::GuidProp) = DD.σ((t,i), x, P.P_target)
+
+DD.nonhypo_σ((t,i)::DD.IndexedTime, x, P::GuidProp) = DD.nonhypo_σ((t,i), x, P.P_target)
 
 DD._b((t, i)::DD.IndexedTime, x, P::GuidProp) = (
     DD.b(t, x, P.P_target)
@@ -393,7 +438,7 @@ end
 
 """
     build_guid_prop(
-        ::Type{AuxLaw}, recording::NamedTuple, tts::Vector, args...
+        ::Type{AuxLaw}, recording::NamedTuple, tts::Vector, args...; kwargs...
     ) where {AuxLaw <: DD.DiffusionProcess}
 
 Initialize multiple instances of `GuidProp` corresponding to guided proposals
@@ -403,7 +448,7 @@ for creating guided proposals. `args...` are passed to each constructor of
 `GuidProp`.
 """
 function build_guid_prop(
-        ::Type{AuxLaw}, recording::NamedTuple, tts::Vector, args...
+        ::Type{AuxLaw}, recording::NamedTuple, tts::Vector, args...; kwargs...
     ) where {AuxLaw <: DD.DiffusionProcess}
 
     N = length(recording.obs)
@@ -414,11 +459,12 @@ function build_guid_prop(
         GP_temp = (
             i==N ?
             GuidProp(
-                tts[i], recording.P, AuxLaw, recording.obs[i], args...,
+                tts[i], recording.P, AuxLaw, recording.obs[i], args...,;
+                kwargs...
             ) :
             GuidProp(
                 tts[i], recording.P, AuxLaw, recording.obs[i], args...,;
-                next_guided_prop=GP_temp
+                next_guided_prop=GP_temp, kwargs...
             )
         )
     end
@@ -429,14 +475,14 @@ end
 
 """
     build_guid_prop(
-        aux_laws::AbstractArray, recording::NamedTuple, tts::Vector, args
+        aux_laws::AbstractArray, recording::NamedTuple, tts::Vector, args, kwargs
     )
 
 Same as a version with `::Type{AuxLaw}`, but `aux_laws` is a list of auxiliary
 laws that correspond to each inter-observation interval.
 """
 function build_guid_prop(
-        aux_laws::AbstractArray, recording::NamedTuple, tts::Vector, args
+        aux_laws::AbstractArray, recording::NamedTuple, tts::Vector, args, kwargs
     )
     N = length(recording.obs)
     @assert N == length(tts) == length(args)
@@ -446,11 +492,12 @@ function build_guid_prop(
         GP_temp = (
             i==N ?
             GuidProp(
-                tts[i], recording.P, aux_laws[i], recording.obs[i], args[i]...,
+                tts[i], recording.P, aux_laws[i], recording.obs[i], args[i]...;
+                kwargs[i]...
             ) :
             GuidProp(
                 tts[i], recording.P, aux_laws[i], recording.obs[i], args[i]...;
-                next_guided_prop=GP_temp
+                next_guided_prop=GP_temp, kwargs[i]...
             )
         )
     end
@@ -473,3 +520,6 @@ end
 
 DD.var_parameters(P::GuidProp) = DD.var_parameters(P.P_target)
 DD.var_parameters(PP::AbstractArray{<:GuidProp}) = DD.var_parameters(PP[1])
+
+DD.nonhypo(x, P::GuidProp) = DD.nonhypo(x, P.P_target)
+DD.nonhypo_σ(σ, P::GuidProp) = DD.nonhypo_σ(σ, P.P_target)

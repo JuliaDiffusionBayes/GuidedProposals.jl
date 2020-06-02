@@ -307,3 +307,14 @@ function ∇logρ!(buffer, i, x, P::HFcSolver{:inplace})
         buffer.∇logρ[j] += _F[j]
     end
 end
+
+
+function proto_mutable_obs(guiding_term_solver::HFcSolver{:outofplace})
+    _s2m_vec(F(guiding_term_solver, 1))
+end
+
+_s2m_vec(v::SVector{S,T}) where {S,T} = MVector{S,T}(v)
+
+
+function proto_mutable_obs(guiding_term_solver::HFcSolver{:inplace})
+end

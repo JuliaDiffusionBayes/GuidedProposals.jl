@@ -40,7 +40,8 @@ makedocs(;
         "How to..." => Any[
             "(TODO) Sample diffusion bridges" => joinpath("how_to_guides", "sample_bridges.md"),
             "(TODO) Sample diffusions in first-passage time setting" => joinpath("how_to_guides", "first_passage_time.md"),
-            "(TODO) Do smoothing" => joinpath("how_to_guides", "smoothing.md"),
+            "Do smoothing" => joinpath("how_to_guides", "smoothing.md"),
+            "Do blocking" => joinpath("how_to_guides", "blocking.md"),
             "(TODO) Do parameter inference" => joinpath("how_to_guides", "parameter_inference.md")
         ],
         "Tutorials" => Any[
