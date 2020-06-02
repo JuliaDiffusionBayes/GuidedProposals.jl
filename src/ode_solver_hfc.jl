@@ -317,4 +317,5 @@ _s2m_vec(v::SVector{S,T}) where {S,T} = MVector{S,T}(v)
 
 
 function proto_mutable_obs(guiding_term_solver::HFcSolver{:inplace})
+    SVector{1,Float64}(1.0) # let's worry about this later, doesn't matter for now
 end
