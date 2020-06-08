@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Setting up a blocking scheme for a simple smoothing problem · GuidedProposals.jl</title><link href="https://fonts.googleapis.com/css?family=Lato|Roboto+Mono" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.11.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.11.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.11.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.11.1/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit">GuidedProposals.jl</span></div><form class="docs-search" action="../../search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><a class="tocitem" href="../../">Home</a></li><li><a class="tocitem" href="../../get_started/overview/">Get started</a></li><li><input class="collapse-toggle" id="menuitem-3" type="checkbox"/><label class="tocitem" for="menuitem-3"><span class="docs-label">User manual</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../../manual/guid_prop/">Guided proposals</a></li><li><a class="tocitem" href="../../manual/multiple_obs/">Multiple observations</a></li><li><a class="tocitem" href="../../manual/log_likelihood/">Log-likelihoods</a></li><li><a class="tocitem" href="../../manual/reparameterizations/">Reparameterizations</a></li><li><a class="tocitem" href="../../manual/bffg/">BFFG algorithm</a></li><li><a class="tocitem" href="../../manual/path_functionals/">Computing path functionals</a></li><li><a class="tocitem" href="../../manual/ode_type/">(TODO) ODE systems</a></li></ul></li><li><input class="collapse-toggle" id="menuitem-4" type="checkbox"/><label class="tocitem" for="menuitem-4"><span class="docs-label">How to...</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../../how_to_guides/sample_bridges/">(TODO) Sample diffusion bridges</a></li><li><a class="tocitem" href="../../how_to_guides/first_passage_time/">(TODO) Sample diffusions in first-passage time setting</a></li><li><a class="tocitem" href="../../how_to_guides/smoothing/">...smooth trajectories</a></li><li><a class="tocitem" href="../../how_to_guides/blocking/">...do blocking</a></li><li><a class="tocitem" href="../../how_to_guides/parameter_inference/">...infer parameters</a></li></ul></li><li><input class="collapse-toggle" id="menuitem-5" type="checkbox" checked/><label class="tocitem" for="menuitem-5"><span class="docs-label">Tutorials</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../in_place_vs_out_of_place/">(TODO) Understanding in-place vs out-of-place</a></li><li><a class="tocitem" href="../smoothing/">Smoothing trajectories of the partially observed FitzHugh–Nagumo diffusion</a></li><li class="is-active"><a class="tocitem" href>Setting up a blocking scheme for a simple smoothing problem</a><ul class="internal"><li><a class="tocitem" href="#Introduction-1"><span>Introduction</span></a></li><li><a class="tocitem" href="#Prerequisites,-data-generation-and-data-preparation-1"><span>Prerequisites, data generation and data preparation</span></a></li><li><a class="tocitem" href="#Blocking-1"><span>Blocking</span></a></li><li><a class="tocitem" href="#Smoothing-algorithm-with-blocking-1"><span>Smoothing algorithm with blocking</span></a></li><li><a class="tocitem" href="#Results-1"><span>Results</span></a></li><li><a class="tocitem" href="#Concluding-remarks-1"><span>Concluding remarks</span></a></li><li class="toplevel"><a class="tocitem" href="#Full-code-from-the-tutorial-1"><span>Full code from the tutorial</span></a></li></ul></li><li><a class="tocitem" href="../parameter_inference/">Parameter inference</a></li></ul></li><li><a class="tocitem" href="../../module_index/">Index</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Tutorials</a></li><li class="is-active"><a href>Setting up a blocking scheme for a simple smoothing problem</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Setting up a blocking scheme for a simple smoothing problem</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/JuliaDiffusionBayes/GuidedProposals.jl/blob/master/docs/src/tutorials/blocking.md#L" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id="Setting-up-a-blocking-scheme-for-a-simple-smoothing-problem-1"><a class="docs-heading-anchor" href="#Setting-up-a-blocking-scheme-for-a-simple-smoothing-problem-1">Setting up a blocking scheme for a simple smoothing problem</a><a class="docs-heading-anchor-permalink" href="#Setting-up-a-blocking-scheme-for-a-simple-smoothing-problem-1" title="Permalink"></a></h1><hr/><blockquote><p>In this tutorial we will smooth trajectories of a diffusion process (based on discrete-time observations of its sampled trajectory) using guided proposals with a blocking scheme. We will apply the algorithm to an example of a hypoelliptic FitzHugh–Nagumo model.</p></blockquote><div class="admonition"><header class="admonition-header">note</header><div class="admonition-body"><p>The most convenient way of smoothing diffusion trajectories with blocking is to use the <a href="https://github.com/JuliaDiffusionBayes/DiffusionMCMC.jl">DiffusionMCMC.jl</a> package. For the pedagogical purposes we explain how to do it without this package, using solely <a href="https://github.com/JuliaDiffusionBayes/DiffusionDefinition.jl">DiffusionDefinition.jl</a>, <a href="https://github.com/JuliaDiffusionBayes/ObservationSchemes.jl">ObservationSchemes.jl</a> and <a href="https://github.com/JuliaDiffusionBayes/GuidedProposals.jl">GuidedProposals.jl</a>.</p></div></div><h2 id="Introduction-1"><a class="docs-heading-anchor" href="#Introduction-1">Introduction</a><a class="docs-heading-anchor-permalink" href="#Introduction-1" title="Permalink"></a></h2><hr/><p>This tutorial is an extension of the previous tutorial on <a href="../smoothing/#tutorial_smoothing-1">smoothing of diffusion trajectories</a>. We use the same example and the same generated data. For more information about the model see <a href="../smoothing/#tutorial_smoothing-1">the previous tutorial</a>.</p><h2 id="Prerequisites,-data-generation-and-data-preparation-1"><a class="docs-heading-anchor" href="#Prerequisites,-data-generation-and-data-preparation-1">Prerequisites, data generation and data preparation</a><a class="docs-heading-anchor-permalink" href="#Prerequisites,-data-generation-and-data-preparation-1" title="Permalink"></a></h2><hr/><p>We need the same packages as last time. We will use the same data that we generated for the last tutorial. The preparation steps remain unchanged.</p><h2 id="Blocking-1"><a class="docs-heading-anchor" href="#Blocking-1">Blocking</a><a class="docs-heading-anchor-permalink" href="#Blocking-1" title="Permalink"></a></h2><hr/><p>Blocking is a technique of sampling diffusion trajectories where only segments of paths (as opposed to a full path) are ever updated at a time. The quickest way to understand it is to look at an animation</p><p>[TODO add animation]</p><p>[TODO add description]</p><p>Translated to computer code, each block will be represented by an appropriate view to the containers that are pertinent to the entire trajectory. More precisely, we should again have the same <code>Workspace</code> struct from the previous tutorial, but now, we should additionally have the struct <code>Block</code> that you can think of as a window that restricts a view to <code>Workspace</code> to certain segments. There is one additional detail. The last segment of each block is a tad special. The terminal observation on such an interval is not the observation from the dataset, but instead, an <strong>exact</strong> and <strong>artificial</strong> observation that corresponds to a value taken at a given time-point by the previously accepted trajectory. As a result, the <code>GuidProp</code> defined on this interval must have the observation field <code>obs</code>, as well as the auxiliary law <code>P_aux</code> appropriately modified. As these changes may in principle (and often would) break the type-stability of <code>GuidProp</code>, we must define a separate <code>GuidProp</code> that can handle exact observation and that will be used with blocking on a given interval. And a final–final detail, the last explanation applies to all final intervals of each block, <strong>with the exception of the last block</strong>. On the last block the terminal observation is never changed to an artificial one.</p><p>Consequently, the <code>Block</code> struct might look as follows:</p><pre><code class="language-julia">const TVIEW{T} = SubArray{T,1,Array{T,1},Tuple{UnitRange{Int64}},true}
+
+mutable struct Block{GP,GPl,TX,TW,TWnr,Ty1}
+    PP::TVIEW{GP}
+    P_last::GPl
+    XX::TVIEW{TX}
+    XX°::TVIEW{TX}
+    WW::TVIEW{TW}
+    WW°::TVIEW{TW}
+    ρρ::TVIEW{Float64}
+    Wnr::TWnr
+    y1::Ty1
+
+    function Block(
+            ws::Workspace{GP,TX,TW,TWnr,Ty1},
+            range::UnitRange{Int64},
+            AuxLawBlocking,
+            artificial_noise=1e-11,
+            last_block=false
+        ) where {GP,TX,TW,TWnr,Ty1}
+        PP = view(ws.PP, range[1]:(range[end]-!last_block)) # omit the last law
+        P_last = (
+            last_block ?
+            nothing :
+            guid_prop_for_blocking(
+                ws.PP[range[end]], AuxLawBlocking, artificial_noise
+            )
+        )
+
+        XX = view(ws.XX, range)
+        XX° = view(ws.XX°, range)
+        WW = view(ws.WW, range)
+        WW° = view(ws.WW°, range)
+        ρρ = view(ws.ρρ, range)
+
+        new{GP,typeof(P_last),TX,TW,TWnr,Ty1}(
+            PP, P_last, XX, XX°, WW, WW°, ρρ, ws.Wnr, deepcopy(ws.y1)
+        )
+    end
+end</code></pre><p>As in the case of smoothing, we should also declare how the sampling of paths should look like, as well as how the containers should be swapped in case of acceptance. The first procedure will differ a little depending on whether we work with the last block or not:</p><pre><code class="language-julia"># NOT the last block
+function draw_proposal!(b::Block)
+    # sample a path on a given block
+    _, ll° = rand!(b.PP, b.XX°, b.WW°, b.WW, b.ρρ, Val(:ll), b.y1; Wnr=b.Wnr)
+    # sample the last segment using a different law
+    y = b.XX°[end-1].x[end]
+    _, ll°_last = rand!(
+        b.P_last, b.XX°[end], b.WW°[end], b.WW[end], b.ρρ[end], Val(:ll), y;
+        Wnr=b.Wnr
+    )
+    ll° + ll°_last
+end
+
+# the last block
+function draw_proposal!(b::Block{GP,Nothing}) where GP
+    # sample a path on a given block
+    _, ll° = rand!(b.PP, b.XX°, b.WW°, b.WW, b.ρρ, Val(:ll), b.y1; Wnr=b.Wnr)
+    ll°
+end
+
+function swap_paths!(b::Block)
+    for i in eachindex(b.XX)
+        b.XX[i], b.XX°[i] = b.XX°[i], b.XX[i]
+        b.WW[i], b.WW°[i] = b.WW°[i], b.WW[i]
+    end
+end</code></pre><p>We could now go ahead and implement smoothing with blocking algorithm, but we can make our lives a tiny bit easier later on by writing some additional helper functions that work with blocks. First of, with blocking we must be able to set the artificial observation:</p><pre><code class="language-julia"># we will be extending functions from GuidedProposals module, hence `GP.`
+GP.set_obs!(b::Block) = set_obs!(b.P_last, b.XX[end].x[end])
+GP.set_obs!(b::Block{T,Nothing}) where T = nothing</code></pre><p>The artificial observation <code>b.XX[end].x[end]</code> will not only become the conditioned-on terminal observation in a given block, but also, it will become the starting position for the subsequent block. Let&#39;s define a function that sets the starting position as well:</p><pre><code class="language-julia">reset_y1!(b::Block) = (b.y1 = b.XX[1].x[1])</code></pre><p>Once the observation is set, we should also be able to recompute the guiding term. This re-computation will slightly differ depending on whether we are dealing with the last block or not</p><pre><code class="language-julia"># NOT the last block
+GP.recompute_guiding_term!(b::Block) = recompute_guiding_term!(b.PP, b.P_last)
+
+# the last block
+function GP.recompute_guiding_term!(b::Block{T,Nothing}) where T
+    recompute_guiding_term!(b.PP)
+end</code></pre><p>After re-computing the guiding term we should find the Wiener noise that reconstructs the already accepted path <code>X</code> for a given guiding term:</p><pre><code class="language-julia"># NOT the last block
+function find_W_for_X!(b::Block)
+    for i in eachindex(b.PP)
+        DD.invsolve!(b.XX[i], b.WW[i], b.PP[i])
+    end
+    DD.invsolve!(b.XX[end], b.WW[end], b.P_last)
+end
+
+# the last block
+function find_W_for_X!(b::Block{GP,Nothing}) where GP
+    for i in eachindex(b.PP)
+        DD.invsolve!(b.XX[i], b.WW[i], b.PP[i])
+    end
+end</code></pre><p>Finally, we should be able to re-evaluate the log-likelihood for the accepted path once the guiding term has changed:</p><pre><code class="language-julia"># NOT the last block
+GP.loglikhd(b::Block) = loglikhd(b.PP, b.XX) + loglikhd(b.P_last, b.XX[end])
+
+# the last block
+GP.loglikhd(b::Block{T,Nothing}) where T = loglikhd(b.PP, b.XX)</code></pre><p>We should be good to go.</p><h2 id="Smoothing-algorithm-with-blocking-1"><a class="docs-heading-anchor" href="#Smoothing-algorithm-with-blocking-1">Smoothing algorithm with blocking</a><a class="docs-heading-anchor-permalink" href="#Smoothing-algorithm-with-blocking-1" title="Permalink"></a></h2><hr/><pre><code class="language-julia">function simple_smoothing_with_blocking(
+        AuxLaw, recording, dt;
+        ρ=0.5, num_steps=10^4, AuxLawBlocking=AuxLaw, artificial_noise=1e-6
+    )
+    ws = Workspace(AuxLaw, recording, dt, ρ)
+
+    #--------------------------------------------------------------------------#
+    #                          Blocking setup                                  #
+    #--------------------------------------------------------------------------#
+    # let&#39;s do some very simple blocking based on three points                 #
+                                                                               #
+    # place three ~equidistant points                                          #
+    num_intv = length(ws.PP)                                                   #
+    one_quarter_pt = div(num_intv, 4)                                          #
+    one_half_pt = div(num_intv, 2)                                             #
+    three_quarter_pt = one_half_pt + one_quarter_pt                            #
+                                                                               #
+    # alias                                                                    #
+    ϵ = artificial_noise                                                       #
+                                                                               #
+    # define two sets of blocks                                                #
+    B1 = [                                                                     #
+        Block(ws, 1:one_half_pt, AuxLaw, ϵ),                                   #
+        Block(ws, (one_half_pt+1):num_intv, AuxLaw, ϵ, true)                   #
+    ]                                                                          #
+    B2 = [                                                                     #
+        Block(ws, 1:one_quarter_pt, AuxLaw, ϵ),                                #
+        Block(ws, (one_quarter_pt+1):three_quarter_pt, AuxLaw, ϵ),             #
+        Block(ws, (three_quarter_pt+1):num_intv, AuxLaw, ϵ, true)              #
+    ]                                                                          #
+    sets_of_blocks = [B1, B2]                                                  #
+                                                                               #
+    num_accpt = [[0,0], [0,0,0]]                                               #
+    lls = [[0.0, 0.0], [0.0, 0.0, 0.0]]                                        #
+    #--------------------------------------------------------------------------#
+
+    # MCMC
+    for i in 1:num_steps
+        # iterate over sets of blocks
+        for (Bidx, B) in enumerate(sets_of_blocks)
+            # set auxiliary points
+            set_obs!.(B)
+
+            # the guiding term must be recomputed...
+            recompute_guiding_term!.(B)
+
+            # find a Wiener path W reconstructing the trajectory X
+            find_W_for_X!.(B)
+
+            # impute the path
+            for k in eachindex(B)
+                ll° = draw_proposal!(B[k])
+
+                # compute log-likelihood on this interval for the accepted path
+                ll = loglikhd(B[k])
+
+                lls[Bidx][k] = ll # save for printing
+                if rand() &lt; exp(ll°-ll)
+                    swap_paths!(B[k])
+                    num_accpt[Bidx][k] += 1
+                    lls[Bidx][k] = ll°
+                end
+                # update the starting point on the subsequent block
+                (k&lt;length(B)) &amp;&amp; reset_y1!(B[k+1])
+            end
+        end
+
+        # progress message
+        if i % 100 == 0
+            msg = &quot;$i. &quot;
+            for j in eachindex(sets_of_blocks)
+                for k in eachindex(lls[j])
+                    msg = msg*&quot;ll_$j$k=$(lls[j][k]) (ar$j$k=$(num_accpt[j][k]/100)), &quot;
+                end
+            end
+            println(msg)
+            num_accpt[1] .= 0
+            num_accpt[2] .= 0
+        end
+
+        # save intermediate path for plotting
+        i % 400 == 0 &amp;&amp; append!(paths, [deepcopy(ws.XX)])
+    end
+    paths
+end</code></pre><h2 id="Results-1"><a class="docs-heading-anchor" href="#Results-1">Results</a><a class="docs-heading-anchor-permalink" href="#Results-1" title="Permalink"></a></h2><hr/><p>Before applying the routine to the data we need to do one last step. FitzHugh–Nagumo diffusion is a type of a hypoelliptic diffusion with a degenerate noise structure. For this type of processes we need to declare the behaviour of two functions from the <a href="https://juliadiffusionbayes.github.io/DiffusionDefinition.jl/dev/">DiffusionDefinition.jl</a> module: <code>nonhypo</code> and <code>nonhypo_σ</code>. The reason for this is additional requirement is a step of computing the Wiener path from the sampled trajectory <span>$X$</span>. Coordinates that have zero Wiener noise contribute nothing to the process of finding <span>$W$</span> from <span>$X$</span>, so we need to indicate to <code>Julia</code> which information is relevant for this step and which is not.</p><div class="admonition is-warning"><header class="admonition-header">Warning</header><div class="admonition-body"><p>Note that we access a subvector of x using <strong>static arrays</strong>! This is very important if the state of your diffusion is represented with static arrays as well. Otherwise the output of <code>nonhypo</code> will be a regular vector, Julia will have to perform computations on a mix of regular and static vectors and your code will be unnecessarily slow!</p></div></div><pre><code class="language-julia">@load_diffusion FitzHughNagumoAux
+@inline DD.nonhypo(x, P::FitzHughNagumo) = x[SVector{1,Int64}(2)]
+@inline DD.nonhypo_σ(t::Float64, x, P::FitzHughNagumo) = SMatrix{1,1,Float64}(P.σ)</code></pre><p>We are ready to run the algorithm. It takes about 56seconds on my laptop.</p><pre><code class="language-julia">paths = simple_smoothing_with_blocking(
+    FitzHughNagumoAux, recording, 0.001; ρ=0.84, num_steps=10^4, artificial_noise=1e-12
+)</code></pre><div class="admonition is-info"><header class="admonition-header">Note</header><div class="admonition-body"><p>If you read through a <a href="../../how_to_guides/blocking/#how_to_do_blocking-1">how-to-guide on blocking</a>, then you might have remembered that the code written there took only <span>$50$</span>seconds to execute on my laptop. Where is the difference coming from? If you recall from the how-to-guide, we were a bit more verbatim and we decided not to recompute the guiding term on the last block from a second blocking set (as it will never change). We could do the same thing here, but instead, we opted for neatness of the code. If this step is performed also in the how-to-guide then both routines take the same amount of time to execute.</p></div></div><p>We can now view the paths in the same way as in the previous tutorial <img src="../../assets/tutorials/blocking/paths.png" alt="paths"/></p><h2 id="Concluding-remarks-1"><a class="docs-heading-anchor" href="#Concluding-remarks-1">Concluding remarks</a><a class="docs-heading-anchor-permalink" href="#Concluding-remarks-1" title="Permalink"></a></h2><hr/><p>TODO</p><div class="admonition is-success"><header class="admonition-header">Tip</header><div class="admonition-body"><p>It should be straightforward to extend this to different diffusion laws, as well as to different blocking scheme. How would you implement a random blocking scheme? (Hint: you need to remove <code>P_last</code> from the definition of <code>Block</code> to avoid re-allocations of memory).</p></div></div><h1 id="Full-code-from-the-tutorial-1"><a class="docs-heading-anchor" href="#Full-code-from-the-tutorial-1">Full code from the tutorial</a><a class="docs-heading-anchor-permalink" href="#Full-code-from-the-tutorial-1" title="Permalink"></a></h1><hr/><pre><code class="language-julia">using GuidedProposals, DiffusionDefinition, ObservationSchemes
+const GP = GuidedProposals
+const DD = DiffusionDefinition
+const OBS = ObservationSchemes
+
+using StaticArrays, Random, Plots
+
+# seed used for this tutorial
+Random.seed!(100)
+
+@load_diffusion FitzHughNagumo
+θ = [0.1, -0.8, 1.5, 0.0, 0.3]
+P = FitzHughNagumo(θ...)
+tt, y1 = 0.0:0.0001:10.0, @SVector [-0.9, -1.0]
+X = rand(P, tt, y1)
+data = map(
+	x-&gt;(x[1], x[2][1] + 0.1randn()),
+	collect(zip(X.t, X.x))[1:1000:end]
+)[2:end]
+
+plot(X, Val(:vs_time), size=(800, 300))
+scatter!(map(x-&gt;x[1], data), map(x-&gt;x[2], data), label=&quot;data&quot;)
+
+recording = (
+    P = P, # diffusion law
+    obs = load_data(
+        ObsScheme(
+            LinearGsnObs(
+                0.0, (@SVector [0.0]); # dummy variables indicating datatype of observations
+                L=(@SMatrix [1.0 0.0]), # observation operator
+                Σ=(@SMatrix [0.01]) # noise on the observations
+            )
+        ),
+        data
+    ),
+    t0 = 0.0,
+    x0_prior = KnownStartingPt(y1),
+)
+
+mutable struct Workspace{GP,TX,TW,TWnr,Ty1}
+    PP::Vector{GP}
+    XX::Vector{TX}
+    XX°::Vector{TX}
+    WW::Vector{TW}
+    WW°::Vector{TW}
+    ρρ::Vector{Float64}
+    Wnr::TWnr
+    y1::Ty1
+
+    function Workspace(AuxLaw, recording, dt, ρ)
+        # time-grids for the forward-simulation of trajectories
+        tts = OBS.setup_time_grids(recording, dt, standard_guid_prop_time_transf)
+        # memory parameters for the preconditioned Crank-Nicolson scheme
+        ρρ = [ρ for _ in tts]
+        # laws of guided proposals
+        PP = build_guid_prop(AuxLaw, recording, tts)
+
+        y1 = rand(recording.x0_prior)
+        # initialize the `accepted` trajectory
+        XX, WW, Wnr = rand(PP, y1)
+        # initialize the containers for the `proposal` trajectory
+        XX°, WW° = trajectory(PP)
+
+        # initialize the workspace
+        new{eltype(PP),eltype(XX),eltype(WW),typeof(Wnr),typeof(y1)}(
+            PP, XX, XX°, WW, WW°, ρρ, Wnr, y1
+        )
+    end
+end
+
+#------------------------------------------------------------------------------#
+#                            START OF NEW CODE                                 #
+#------------------------------------------------------------------------------#
+
+const TVIEW{T} = SubArray{T,1,Array{T,1},Tuple{UnitRange{Int64}},true}
+
+mutable struct Block{GP,GPl,TX,TW,TWnr,Ty1}
+    PP::TVIEW{GP}
+    P_last::GPl
+    XX::TVIEW{TX}
+    XX°::TVIEW{TX}
+    WW::TVIEW{TW}
+    WW°::TVIEW{TW}
+    ρρ::TVIEW{Float64}
+    Wnr::TWnr
+    y1::Ty1
+
+    function Block(
+            ws::Workspace{GP,TX,TW,TWnr,Ty1},
+            range::UnitRange{Int64},
+            AuxLawBlocking,
+            artificial_noise=1e-11,
+            last_block=false
+        ) where {GP,TX,TW,TWnr,Ty1}
+        PP = view(ws.PP, range[1]:(range[end]-!last_block)) # omit the last law
+        P_last = (
+            last_block ?
+            nothing :
+            guid_prop_for_blocking(
+                ws.PP[range[end]], AuxLawBlocking, artificial_noise
+            )
+        )
+
+        XX = view(ws.XX, range)
+        XX° = view(ws.XX°, range)
+        WW = view(ws.WW, range)
+        WW° = view(ws.WW°, range)
+        ρρ = view(ws.ρρ, range)
+
+        new{GP,typeof(P_last),TX,TW,TWnr,Ty1}(
+            PP, P_last, XX, XX°, WW, WW°, ρρ, ws.Wnr, deepcopy(ws.y1)
+        )
+    end
+end
+
+# NOT the last block
+function draw_proposal!(b::Block)
+    # sample a path on a given block
+    _, ll° = rand!(b.PP, b.XX°, b.WW°, b.WW, b.ρρ, Val(:ll), b.y1; Wnr=b.Wnr)
+    # sample the last segment using a different law
+    y = b.XX°[end-1].x[end]
+    _, ll°_last = rand!(
+        b.P_last, b.XX°[end], b.WW°[end], b.WW[end], b.ρρ[end], Val(:ll), y;
+        Wnr=b.Wnr
+    )
+    ll° + ll°_last
+end
+
+# the last block
+function draw_proposal!(b::Block{GP,Nothing}) where GP
+    # sample a path on a given block
+    _, ll° = rand!(b.PP, b.XX°, b.WW°, b.WW, b.ρρ, Val(:ll), b.y1; Wnr=b.Wnr)
+    ll°
+end
+
+function swap_paths!(b::Block)
+    for i in eachindex(b.XX)
+        b.XX[i], b.XX°[i] = b.XX°[i], b.XX[i]
+        b.WW[i], b.WW°[i] = b.WW°[i], b.WW[i]
+    end
+end
+
+# we will be extending functions from GuidedProposals module, hence `GP.`
+GP.set_obs!(b::Block) = set_obs!(b.P_last, b.XX[end].x[end])
+GP.set_obs!(b::Block{T,Nothing}) where T = nothing
+reset_y1!(b::Block) = (b.y1 = b.XX[1].x[1])
+# NOT the last block
+GP.recompute_guiding_term!(b::Block) = recompute_guiding_term!(b.PP, b.P_last)
+
+# the last block
+function GP.recompute_guiding_term!(b::Block{T,Nothing}) where T
+    recompute_guiding_term!(b.PP)
+end
+# NOT the last block
+function find_W_for_X!(b::Block)
+    for i in eachindex(b.PP)
+        DD.invsolve!(b.XX[i], b.WW[i], b.PP[i])
+    end
+    DD.invsolve!(b.XX[end], b.WW[end], b.P_last)
+end
+
+# the last block
+function find_W_for_X!(b::Block{GP,Nothing}) where GP
+    for i in eachindex(b.PP)
+        DD.invsolve!(b.XX[i], b.WW[i], b.PP[i])
+    end
+end
+
+# NOT the last block
+GP.loglikhd(b::Block) = loglikhd(b.PP, b.XX) + loglikhd(b.P_last, b.XX[end])
+
+# the last block
+GP.loglikhd(b::Block{T,Nothing}) where T = loglikhd(b.PP, b.XX)
+
+function simple_smoothing_with_blocking(
+        AuxLaw, recording, dt;
+        ρ=0.5, num_steps=10^4, AuxLawBlocking=AuxLaw, artificial_noise=1e-6
+    )
+    ws = Workspace(AuxLaw, recording, dt, ρ)
+    paths = []
+
+    #--------------------------------------------------------------------------#
+    #                          Blocking setup                                  #
+    #--------------------------------------------------------------------------#
+    # let&#39;s do some very simple blocking based on three points                 #
+                                                                               #
+    # place three ~equidistant points                                          #
+    num_intv = length(ws.PP)                                                   #
+    one_quarter_pt = div(num_intv, 4)                                          #
+    one_half_pt = div(num_intv, 2)                                             #
+    three_quarter_pt = one_half_pt + one_quarter_pt                            #
+                                                                               #
+    # alias                                                                    #
+    ϵ = artificial_noise                                                       #
+                                                                               #
+    # define two sets of blocks                                                #
+    B1 = [                                                                     #
+        Block(ws, 1:one_half_pt, AuxLaw, ϵ),                                   #
+        Block(ws, (one_half_pt+1):num_intv, AuxLaw, ϵ, true)                  #
+    ]                                                                          #
+    B2 = [                                                                     #
+        Block(ws, 1:one_quarter_pt, AuxLaw, ϵ),                                #
+        Block(ws, (one_quarter_pt+1):three_quarter_pt, AuxLaw, ϵ),             #
+        Block(ws, (three_quarter_pt+1):num_intv, AuxLaw, ϵ, true)             #
+    ]                                                                          #
+    sets_of_blocks = [B1, B2]                                                  #
+                                                                               #
+    num_accpt = [[0,0], [0,0,0]]                                               #
+    lls = [[0.0, 0.0], [0.0, 0.0, 0.0]]                                        #
+    #--------------------------------------------------------------------------#
+
+    # MCMC
+    for i in 1:num_steps
+        # iterate over sets of blocks
+        for (Bidx, B) in enumerate(sets_of_blocks)
+            # set auxiliary points
+            set_obs!.(B)
+
+            # the guiding term must be recomputed...
+            recompute_guiding_term!.(B)
+
+            # find a Wiener path W reconstructing the trajectory X
+            find_W_for_X!.(B)
+
+            # impute the path
+            for k in eachindex(B)
+                ll° = draw_proposal!(B[k])
+
+                # compute log-likelihood on this interval for the accepted path
+                ll = loglikhd(B[k])
+
+                lls[Bidx][k] = ll # save for printing
+                if rand() &lt; exp(ll°-ll)
+                    swap_paths!(B[k])
+                    num_accpt[Bidx][k] += 1
+                    lls[Bidx][k] = ll°
+                end
+                # update the starting point on the subsequent block
+                (k&lt;length(B)) &amp;&amp; reset_y1!(B[k+1])
+            end
+        end
+
+        # progress message
+        if i % 100 == 0
+            msg = &quot;$i. &quot;
+            for j in eachindex(sets_of_blocks)
+                for k in eachindex(lls[j])
+                    msg = msg*&quot;ll_$j$k=$(lls[j][k]) (ar$j$k=$(num_accpt[j][k]/100)), &quot;
+                end
+            end
+            println(msg)
+            num_accpt[1] .= 0
+            num_accpt[2] .= 0
+        end
+
+        # save intermediate path for plotting
+        i % 400 == 0 &amp;&amp; append!(paths, [deepcopy(ws.XX)])
+    end
+    paths
+end
+
+
+@load_diffusion FitzHughNagumoAux
+@inline DD.nonhypo(x, P::FitzHughNagumo) = x[SVector{1,Int64}(2)]
+@inline DD.nonhypo_σ(t::Float64, x, P::FitzHughNagumo) = SMatrix{1,1,Float64}(P.σ)
+
+paths = simple_smoothing_with_blocking(
+    FitzHughNagumoAux, recording, 0.001; ρ=0.84, num_steps=10^4, artificial_noise=1e-12
+)
+
+#------------------------------------------------------------------------------#
+#                              END OF NEW CODE                                 #
+#------------------------------------------------------------------------------#
+
+function glue_paths(XX)
+    XX_glued = trajectory(
+        glue_containers( map(x-&gt;x.t, XX) ),
+        glue_containers( map(x-&gt;x.x, XX) ),
+    )
+end
+
+function glue_containers(xs)
+    glued_xs = collect(Iterators.flatten(map(x-&gt;x[1:end-1], xs)))
+    append!(glued_xs, [xs[end][end]])
+    glued_xs
+end
+
+convenient_paths = glue_paths.(paths)
+
+col = [&quot;#581845&quot;, &quot;#900C3F&quot;, &quot;#C70039&quot;, &quot;#FF5733&quot;, &quot;#FFC300&quot;]
+
+p = plot(size=(1000, 500))
+for path in convenient_paths
+	plot!(p, path, Val(:vs_time), alpha=0.4, label=&quot;&quot;, color=[col[3] col[1]])
+end
+plot!(X, Val(:vs_time), color=[col[5] col[4]], linewidth=[3 0.5], label=[&quot;underlying X₁&quot; &quot;underlying X₂&quot;])
+scatter!(p, map(x-&gt;x[1], data), map(x-&gt;x[2], data), label=&quot;data&quot;, markercolor=col[5])
+display(p)</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../smoothing/">« Smoothing trajectories of the partially observed FitzHugh–Nagumo diffusion</a><a class="docs-footer-nextpage" href="../parameter_inference/">Parameter inference »</a></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Monday 8 June 2020 08:47">Monday 8 June 2020</span>. Using Julia version 1.4.2.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
