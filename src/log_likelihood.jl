@@ -121,7 +121,7 @@ function loglikhd(
         skip=0
     )
     ll_tot = loglikhd_obs(PP[1], XX[1].x[1])
-    for i in eachindex(XX, PP)
+    for i in eachindex(PP)
         ll_tot += loglikhd(ir, PP[i], XX[i], PP[i].guiding_term_solver; skip=skip)
     end
     ll_tot
@@ -156,14 +156,14 @@ a starting point `y1`. Store the trajectory in `XX`. Compute the log-likelihood
 `success_flag` is set to false only if sampling was prematurely halted due to
 `XX` violating assumptions about state space.
 """
-function solve_and_ll!(X, W, P::GuidProp, y1)
-    solve_and_ll!(X, W, P, P.guiding_term_solver, y1)
+function solve_and_ll!(X, W, P::GuidProp, y1; skip=0)
+    solve_and_ll!(X, W, P, P.guiding_term_solver, y1; skip=skip)
 end
 
-function solve_and_ll!(XX, WW, PP::AbstractArray{<:GuidProp}, y1)
+function solve_and_ll!(XX, WW, PP::AbstractArray{<:GuidProp}, y1; skip=0)
     ll_tot = loglikhd_obs(PP[1], y1)
     for i in eachindex(PP)
-        success, ll = solve_and_ll!(XX[i], WW[i], PP[i], PP[i].guiding_term_solver, y1)
+        success, ll = solve_and_ll!(XX[i], WW[i], PP[i], PP[i].guiding_term_solver, y1; skip=skip)
         success || return false, ll
         ll_tot += ll
         y1 = XX[i].x[end]
@@ -176,7 +176,8 @@ function solve_and_ll!(
         WW,
         P::GuidProp,
         ::AbstractGuidingTermSolver{:outofplace},
-        y1,
+        y1;
+        skip=0
     )
     yy, ww, tt = XX.x, WW.x, XX.t
     N = length(XX)
@@ -185,6 +186,7 @@ function solve_and_ll!(
     x = y1
     ll = 0.0
     for i in 1:(N-1)
+        add_to_ll = (i < N-skip)
         s = tt[i]
         dt = tt[i+1] - tt[i]
         dW = ww[i+1] - ww[i]
@@ -196,12 +198,12 @@ function solve_and_ll!(
         σ_i = DD.σ(s, x, P.P_target)
         a_i = σ_i*σ_i'
 
-        ll += dot(b_i-btil_i, r_i) * dt
+        add_to_ll && (ll += dot(b_i-btil_i, r_i) * dt)
 
         if !DD.constdiff(P)
             H_i = H(i, x, P)
             atil_i = DD.a(s, x, P.P_aux)
-            ll += 0.5*tr( (a_i - atil_i)*(r_i*r_i'-H_i') ) * dt
+            add_to_ll && (ll += 0.5*tr( (a_i - atil_i)*(r_i*r_i'-H_i') ) * dt)
         end
 
         x = x + (a_i*r_i + b_i)*dt + σ_i*dW
@@ -219,6 +221,7 @@ function solve_and_ll!(
         WW,
         P::GuidProp,
         ::AbstractGuidingTermSolver{:inplace},
-        y1,
+        y1;
+        skip=0
     )
 end

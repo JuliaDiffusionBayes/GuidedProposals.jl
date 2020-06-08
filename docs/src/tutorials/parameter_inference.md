@@ -1,10 +1,12 @@
-# Parameter inference on the example of FitzHugh-Nagumo model
+# Parameter inference on the example of the FitzHugh-Nagumo model
+***
 > In this tutorial we will explain how to perform Bayesian inference via MCMC sampling with [GuidedProposals.jl](https://github.com/JuliaDiffusionBayes/GuidedProposals.jl/dev) on the example of the FitzHugh-Nagumo model. We will write a Metropolis-within-Gibbs algorithm that alternately imputes the unobserved path and updates unknown parameter. We will conduct inference for a single parameter, but it will be clear how to extend this tutorial to multiple parameters.
 
 ## Introduction
+----
 
 ## Prerequisites
-
+----
 ```julia
 using GuidedProposals, DiffusionDefinition, ObservationSchemes
 const GP = GuidedProposals
@@ -15,7 +17,7 @@ using StaticArrays, Random, Plots
 ```
 
 ## Data generation
-
+----
 ```julia
 @load_diffusion FitzHughNagumo
 # generate some data
@@ -38,6 +40,7 @@ scatter!(map(x->x[1], data), map(x->x[2], data), label="data")
 ![data](../assets/tutorials/parameter_inference/data.png)
 
 ## Data preparation
+---
 ```julia
 # let's prepare the data
 recording = (
@@ -58,7 +61,7 @@ recording = (
 
 
 ## Inference algorithm
-
+----
 ```julia
 # define a simple transition kernel
 function customkernel(θ, s::Symbol, scale=0.1)
@@ -127,6 +130,7 @@ end
 ```
 
 ## Performing inference
+----
 ```julia
 @load_diffusion FitzHughNagumoAux
 # let's declare which parameters are not changing
@@ -141,7 +145,7 @@ paths, θθ = simple_inference(
 It takes about 45sec on my laptop...
 
 ## Examining the results
-
+----
 ```julia
 plot(θθ)
 ```

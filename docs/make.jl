@@ -40,13 +40,14 @@ makedocs(;
         "How to..." => Any[
             "(TODO) Sample diffusion bridges" => joinpath("how_to_guides", "sample_bridges.md"),
             "(TODO) Sample diffusions in first-passage time setting" => joinpath("how_to_guides", "first_passage_time.md"),
-            "Do smoothing" => joinpath("how_to_guides", "smoothing.md"),
-            "Do blocking" => joinpath("how_to_guides", "blocking.md"),
-            "(TODO) Do parameter inference" => joinpath("how_to_guides", "parameter_inference.md")
+            "...smooth trajectories" => joinpath("how_to_guides", "smoothing.md"),
+            "...do blocking" => joinpath("how_to_guides", "blocking.md"),
+            "...infer parameters" => joinpath("how_to_guides", "parameter_inference.md")
         ],
         "Tutorials" => Any[
             "(TODO) Understanding in-place vs out-of-place" => joinpath("tutorials", "in_place_vs_out_of_place.md"),
-            "(TODO) Smoothing/Imputation" => joinpath("tutorials", "smoothing.md"),
+            "Smoothing trajectories of the partially observed FitzHugh–Nagumo diffusion" => joinpath("tutorials", "smoothing.md"),
+            "Setting up a blocking scheme for a simple smoothing problem" => joinpath("tutorials", "blocking.md"),
             "Parameter inference" => joinpath("tutorials", "parameter_inference.md"),
         ],
         "Index" => "module_index.md",

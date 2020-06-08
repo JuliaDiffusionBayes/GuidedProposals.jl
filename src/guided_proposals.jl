@@ -6,12 +6,11 @@
 #==============================================================================#
 """
     struct GuidProp{
-            K,DP,DW,SS,R,R2,O,AO,S,T
+            K,DP,DW,SS,R,R2,O,S,T
             } <: DiffusionDefinition.DiffusionProcess{K,DP,DW,SS}
         P_target::R
         P_aux::R2
         obs::O
-        aux_obs::AO
         guiding_term_solver::S
     end
 
@@ -35,7 +34,6 @@ for simulation of guided proposals and computation of their likelihood.
                 eltype=Float64,
             ),
             next_guided_prop=nothing,
-            artifical_noise=1e-11,
         ) where {
             R<:DD.DiffusionProcess,
             TR2<:DD.DiffusionProcess,
@@ -61,26 +59,18 @@ that is to be used for computations of `∇logρ`
     be employed and `eltype` indicates the data-type of each container's
     member. )
 Finally, `next_guided_prop` is the guided proposal for the subsequent
-inter-observation interval. `artifical_noise` is only used for blocking, in
-conjuction with the field `aux_obs`, which holds an auxiliary observation. The
-former denotes the level of artificial noise that needs to be added on to an
-otherwise exact observation. The latter field is used for holding the said
-observation.
+inter-observation interval.
 """
-struct GuidProp{K,DP,DW,SS,R,R2,O,AO,S,T} <: DD.DiffusionProcess{K,DP,DW,SS}
+struct GuidProp{K,DP,DW,SS,R,R2,O,S,T} <: DD.DiffusionProcess{K,DP,DW,SS}
     P_target::R
     P_aux::R2
     obs::O
-    aux_obs::AO
     guiding_term_solver::S
 
-    #TODO deprecate
-    function GuidProp{K,DP,DW,SS,R,R2,O,AO,S,T}(
-            P_target::R, P_aux::R2, obs::O, aux_obs::AO, guiding_term_solver::S
-        ) where {K,DP,DW,SS,R,R2,O,AO,S,T}
-        new{K,DP,DW,SS,R,R2,O,AO,S,T}(
-            P_target, P_aux, obs, aux_obs, guiding_term_solver
-        )
+    function GuidProp{K,DP,DW,SS,R,R2,O,S,T}(
+            P_target, P_aux, obs, guiding_term_solver
+        ) where {K,DP,DW,SS,R,R2,O,S,T}
+        new{K,DP,DW,SS,R,R2,O,S,T}(P_target, P_aux, obs, guiding_term_solver)
     end
 
     function GuidProp(
@@ -97,23 +87,16 @@ struct GuidProp{K,DP,DW,SS,R,R2,O,AO,S,T} <: DD.DiffusionProcess{K,DP,DW,SS}
                 eltype=Float64,
             );
             next_guided_prop=nothing,
-            artifical_noise=1e-11,
         ) where {R<:DD.DiffusionProcess,TR2<:DD.DiffusionProcess,O<:OBS.Observation}
         @assert tt[end] == obs.t
 
         P_target = deepcopy(_P_target)
-        all_params = DD.parameters(P_target)
-        epin = DD.end_point_info_names(P_aux_type)
-        pnames = filter(p->!(p in epin), DD.parameter_names(P_aux_type))
-        pvals = map(x->all_params[x], pnames)
-        p_to_pass = [n=>v for (n,v) in zip(pnames, pvals)]
 
         P_aux = TR2(
             tt[1],
             obs.t,
-            deepcopy(OBS.ν(obs)),
-            (obs.full_obs ? deepcopy(OBS.ν(obs)) : tuple() )...;
-            p_to_pass...,
+            deepcopy(OBS.ν(obs));
+            extract_parameters_to_pass(P_target, P_aux_type)...,
         )
         R2 = typeof(P_aux)
 
@@ -137,34 +120,32 @@ struct GuidProp{K,DP,DW,SS,R,R2,O,AO,S,T} <: DD.DiffusionProcess{K,DP,DW,SS}
             params...
         )
 
-        proto_obs = proto_mutable_obs(guiding_term_solver)
-        aux_obs = build_aux_obs(obs, proto_obs, artifical_noise)
-
         S = typeof(guiding_term_solver)
         T = choices_now.ode_type
 
         DP, DW = DD.dimension(P_target)
         K, SS = eltype(P_target), DD.state_space(P_target)
-        AO = typeof(aux_obs)
 
-        new{K,DP,DW,SS,R,R2,O,AO,S,T}(
-            P_target, P_aux, obs, aux_obs, guiding_term_solver
+        new{K,DP,DW,SS,R,R2,O,S,T}(
+            P_target, P_aux, obs, guiding_term_solver
         )
     end
 end
 
-function build_aux_obs(obs, proto_obs, ϵ)
-    mut = OBS.ismutable(obs.obs)
-    LinearGsnObs(
-        obs.t,
-        proto_obs;
-        Σ = OBS._default_Σ(proto_obs, mut, ϵ),
-        L = OBS._default_L(proto_obs, mut),
-        μ = OBS._default_μ(proto_obs, mut),
-        full_obs=true
-    )
-end
+"""
+    extract_parameters_to_pass(P_target, P_aux_type)
 
+A helper function for building an instance of `P_aux_type` using an initialized
+`P_target`. Retreive parameter values from `P_target` for all parameter names
+that appear also in `P_aux_type`.
+"""
+function extract_parameters_to_pass(P_target, P_aux_type)
+    all_params = DD.parameters(P_target)
+    epin = DD.end_point_info_names(P_aux_type)
+    pnames = filter(p->!(p in epin), DD.parameter_names(P_aux_type))
+    pvals = map(x->all_params[x], pnames)
+    [n=>v for (n,v) in zip(pnames, pvals)]
+end
 
 """
     reformat(solver_choice::NamedTuple, last_interval::Bool, P_aux)
@@ -369,35 +350,21 @@ remove].
 """
 mode(P::GuidProp) =  mode(P.guiding_term_solver)
 
-struct NoBlockingMode end
-struct BlockingMode end
-const _NOBLOCKING = NoBlockingMode()
-
 """
-    recompute_guiding_term!(P::GuidProp, next_guided_prop=nothing;  blocking=_NOBLOCKING)
+    recompute_guiding_term!(P::GuidProp, next_guided_prop=nothing)
 
 Recompute the guiding term (most often used after update of parameters or change
 of an observation). `next_guided_prop` is the guided proposal law from the
 subsequent interval
 """
-function recompute_guiding_term!(
-        P::GuidProp, next_guided_prop=nothing; blocking=_NOBLOCKING
-    )
+function recompute_guiding_term!(P::GuidProp, next_guided_prop=nothing)
     xT_plus = fetch_xT_plus(
         Val{mode(P)}(),
         next_guided_prop,
         eltype(HFc0(P)),
         DD.dimension(P).process
     )
-    _recompute_guiding_term!(P, xT_plus, blocking)
-end
-
-function _recompute_guiding_term!(P::GuidProp, xT_plus, ::NoBlockingMode)
     recompute_guiding_term!(P.guiding_term_solver, P.P_aux, P.obs, xT_plus)
-end
-
-function _recompute_guiding_term!(P::GuidProp, xT_plus, ::BlockingMode)
-    recompute_guiding_term!(P.guiding_term_solver, P.P_aux, P.aux_obs, xT_plus)
 end
 
 """
@@ -406,14 +373,22 @@ end
 Recompute the guiding term for the entire trajectory with all observations (most
 often used after update of parameters or change of an observation).
 """
-function recompute_guiding_term!(PP::AbstractArray{<:GuidProp}; blocking=_NOBLOCKING)
+function recompute_guiding_term!(PP::AbstractArray{<:GuidProp})
     N = length(PP)
-    recompute_guiding_term!(PP[end]; blocking=blocking)
+    recompute_guiding_term!(PP[end])
     for i in (N-1):-1:1
         recompute_guiding_term!(PP[i], PP[i+1])
     end
 end
 
+function recompute_guiding_term!(PP::AbstractArray{<:GuidProp}, P_last)
+    N = length(PP)
+    recompute_guiding_term!(P_last)
+    N > 1 && recompute_guiding_term!(PP[N-1], P_last)
+    for i in (N-2):-1:1
+        recompute_guiding_term!(PP[i], PP[i+1])
+    end
+end
 
 DD.constdiff(P::GuidProp) = DD.constdiff(P.P_target) && DD.constdiff(P.P_aux)
 
@@ -523,3 +498,90 @@ DD.var_parameters(PP::AbstractArray{<:GuidProp}) = DD.var_parameters(PP[1])
 
 DD.nonhypo(x, P::GuidProp) = DD.nonhypo(x, P.P_target)
 DD.nonhypo_σ(σ, P::GuidProp) = DD.nonhypo_σ(σ, P.P_target)
+
+
+"""
+    guid_prop_for_blocking(
+        P::GuidProp,
+        AuxLaw=remove_curly(R2),
+        artificial_noise=1e-11,
+        solver_choice=(
+            solver=Tsit5(),
+            ode_type=:HFc,
+            convert_to_HFc=false,
+            mode=:outofplace,
+            gradients=false,
+            eltype=Float64,
+        )
+    )
+
+Initializer for `GuidProp` struct when doing blocking. It is used to initialize
+a `GuidProp` on the last interval of each block. It uses an existing `GuidProp`
+instance `P` from a no-blocking scheme as a template for parameter values and
+uses a new auxiliary law `AuxLaw` that is adjusted for the fact that the
+terminal observation is observed exactly. `artificial_noise` is added to the
+exact observation for the numerical purposes. `solver choices` works as with
+`GuidProp` initializer.
+"""
+function guid_prop_for_blocking(
+        P::GuidProp{K,DP,DW,SS,R,R2,O,S,T},
+        AuxLaw=remove_curly(R2),
+        artificial_noise=1e-11,
+        solver_choice=(
+            solver=Tsit5(),
+            ode_type=:HFc,
+            convert_to_HFc=false,
+            mode=:outofplace,
+            gradients=false,
+            eltype=Float64,
+        )
+    ) where {K,DP,DW,SS,R,R2,O,S,T}
+    proto_obs = proto_mutable_obs(P.guiding_term_solver)
+    artificial_obs = build_artif_obs(P.obs, proto_obs, artificial_noise)
+    P_aux = AuxLaw(
+        P.P_aux.t0, P.obs.t, OBS.ν(artificial_obs);
+        extract_parameters_to_pass(P.P_target, P.P_aux)...
+    )
+
+    choices_now, choices_to_pass_on = reformat(solver_choice, true, P_aux)
+
+    params = (
+        collect(time(P)),
+        P_aux,
+        artificial_obs,
+        Val{choices_now.mode}(),
+        choices_to_pass_on,
+        nothing,
+    )
+
+    guiding_term_solver = init_solver(
+        Val{choices_now.ode_type}(),
+        Val{choices_now.convert_to_HFc}(),
+        params...
+    )
+    S2 = typeof(guiding_term_solver)
+    T2 = choices_now.ode_type
+    O2 = typeof(artificial_obs)
+    R3 = typeof(P_aux)
+
+    GuidProp{K,DP,DW,SS,R,R3,O2,S2,T2}(
+        deepcopy(P.P_target), P_aux, artificial_obs, guiding_term_solver
+    )
+end
+
+"""
+    build_artif_obs(obs, proto_obs, ϵ)
+
+Build an artifical observation for the blocking scheme.
+"""
+function build_artif_obs(obs, proto_obs, ϵ)
+    mut = OBS.ismutable(obs.obs)
+    LinearGsnObs(
+        obs.t,
+        proto_obs;
+        Σ = OBS._default_Σ(proto_obs, mut, ϵ),
+        L = OBS._default_L(proto_obs, mut),
+        μ = OBS._default_μ(proto_obs, mut),
+        full_obs=true
+    )
+end

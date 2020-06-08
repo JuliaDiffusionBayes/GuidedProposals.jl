@@ -15,7 +15,7 @@ Performing these two steps in a setting of importance sampling or mcmc sampling 
 
 ## Defining the target law
 ----------------------------------------------------------
-To define the target law we should make use another package from the [JuliaDiffusionBayes](https://github.com/JuliaDiffusionBayes/) suite: [DiffusionDefinition.jl](https://github.com/JuliaDiffusionBayes/DiffusionDefinition.jl). We can either define the target law using the macro `@define_diffusion` or—if we can—simply load in a pre-defined processes.
+To define the target law we should make use of another package from the [JuliaDiffusionBayes](https://github.com/JuliaDiffusionBayes/) suite: [DiffusionDefinition.jl](https://github.com/JuliaDiffusionBayes/DiffusionDefinition.jl). We can either define the target law using the macro `@define_diffusion` or—if we can—simply load in a pre-defined processes.
 
 !!! tip "Running example—Lotka-Volterra model—defining the target law"
 

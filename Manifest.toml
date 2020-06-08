@@ -119,9 +119,7 @@ version = "1.0.1"
 
 [[DiffusionDefinition]]
 deps = ["ForwardDiff", "LinearAlgebra", "MacroTools", "Random", "RecipesBase", "RecursiveArrayTools", "Reexport", "SparseArrays", "StaticArrays", "Trajectories"]
-git-tree-sha1 = "6fb746f4777947f55ca02bcc612ac630650a0d7f"
-repo-rev = "master"
-repo-url = "https://github.com/JuliaDiffusionBayes/DiffusionDefinition.jl"
+path = "/home/rabid-koala/.julia/dev/DiffusionDefinition/"
 uuid = "c126fcb9-5a08-4fee-b75a-97eb446288b0"
 version = "0.1.0"
 
@@ -294,9 +292,7 @@ version = "0.3.3"
 
 [[ObservationSchemes]]
 deps = ["Distributions", "GaussianDistributions", "LinearAlgebra", "OrderedCollections", "Random", "StaticArrays"]
-git-tree-sha1 = "1df3739efee5d2bbf19278156a1c1625feaf685e"
-repo-rev = "master"
-repo-url = "https://github.com/JuliaDiffusionBayes/ObservationSchemes.jl"
+path = "/home/rabid-koala/.julia/dev/ObservationSchemes/"
 uuid = "af94d80e-94fa-4c0b-866a-2d8bf15822bc"
 version = "0.1.0"
 

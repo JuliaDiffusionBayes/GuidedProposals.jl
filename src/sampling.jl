@@ -230,12 +230,12 @@ along the way.
 function Random.rand!(
         P::GuidProp,
         X, W, v::Val{:ll}, y1=zero(P);
-        Wnr=Wiener()
+        Wnr=Wiener(), skip=0
     )
     rand!(
         Random.GLOBAL_RNG,
         P, X, W, v, y1, DD.ismutable(y1);
-        Wnr=Wnr
+        Wnr=Wnr, skip=skip
     )
 end
 
@@ -243,12 +243,12 @@ function Random.rand!(
         rng::Random.AbstractRNG,
         P::GuidProp,
         X, W, v::Val{:ll}, y1=zero(P);
-        Wnr=Wiener()
+        Wnr=Wiener(), skip=0
     )
     rand!(
         rng,
         P, X, W, v, y1, DD.ismutable(y1);
-        Wnr=Wnr
+        Wnr=Wnr, skip=skip
     )
 end
 
@@ -256,17 +256,17 @@ function Random.rand!(
         rng::Random.AbstractRNG,
         P::GuidProp,
         X, W, ::Val{:ll}, y1::K, ::Val{false};
-        Wnr=Wiener(),
+        Wnr=Wiener(), skip=0
     ) where K
     rand!(rng, Wnr, W)
-    solve_and_ll!(X, W, P, y1)
+    solve_and_ll!(X, W, P, y1; skip=skip)
 end
 
 function Random.rand!(
         rng::Random.AbstractRNG,
         P::GuidProp,
         X, W, ::Val{:ll}, y1::K, ::Val{true};
-        Wnr=Wiener(),
+        Wnr=Wiener(), skip=0
     ) where K
     error("in-place not implemented")
 end
@@ -288,12 +288,12 @@ log-likelihood (only path contribution) along the way.
 function Random.rand!(
         P::GuidProp,
         X°, W°, W, ρ, v::Val{:ll}, y1=zero(P);
-        Wnr=Wiener()
+        Wnr=Wiener(), skip=0
     )
     rand!(
         Random.GLOBAL_RNG,
         P, X°, W°, W, ρ, v, y1, DD.ismutable(y1);
-        Wnr=Wnr
+        Wnr=Wnr, skip=skip
     )
 end
 
@@ -301,12 +301,12 @@ function Random.rand!(
         rng::Random.AbstractRNG,
         P::GuidProp,
         X°, W°, W, ρ, v::Val{:ll}, y1=zero(P);
-        Wnr=Wiener()
+        Wnr=Wiener(), skip=0
     )
     rand!(
         rng,
         P, X°, W°, W, ρ, v, y1, DD.ismutable(y1);
-        Wnr=Wnr
+        Wnr=Wnr, skip=skip
     )
 end
 
@@ -314,11 +314,11 @@ function Random.rand!(
         rng::Random.AbstractRNG,
         P::GuidProp,
         X°, W°, W, ρ, ::Val{:ll}, y1::K, ::Val{false};
-        Wnr=Wiener(),
+        Wnr=Wiener(), skip=0
     ) where K
     rand!(rng, Wnr, W°)
     crank_nicolson!(W°.x, W.x, ρ)
-    solve_and_ll!(X°, W°, P, y1)
+    solve_and_ll!(X°, W°, P, y1; skip=skip)
 end
 
 function Random.rand!(
@@ -372,7 +372,7 @@ function Base.rand(
 end
 
 #===============================================================================
-                in-place sampling over multiple intervals
+                out-of-place sampling over multiple intervals
 ===============================================================================#
 
 #=---- Vanilla ----=#
@@ -524,12 +524,12 @@ end-points contribution) along the way.
 function Random.rand!(
         PP::AbstractArray{<:GuidProp},
         XX, WW, v::Val{:ll}, y1=zero(PP[1]);
-        Wnr=Wiener()
+        Wnr=Wiener(), skip=0
     )
     rand!(
         Random.GLOBAL_RNG,
         PP, XX, WW, v, y1, DD.ismutable(y1);
-        Wnr=Wnr
+        Wnr=Wnr, skip=skip
     )
 end
 
@@ -537,12 +537,12 @@ function Random.rand!(
         rng::Random.AbstractRNG,
         PP::AbstractArray{<:GuidProp},
         XX, WW, v::Val{:ll}, y1=zero(PP[1]);
-        Wnr=Wiener()
+        Wnr=Wiener(), skip=0
     )
     rand!(
         rng,
         PP, XX, WW, v, y1, DD.ismutable(y1);
-        Wnr=Wnr
+        Wnr=Wnr, skip=skip
     )
 end
 
@@ -550,11 +550,13 @@ function Random.rand!(
         rng::Random.AbstractRNG,
         PP::AbstractArray{<:GuidProp},
         XX, WW, v::Val{:ll}, y1::K, m::Val{false};
-        Wnr=Wiener(),
+        Wnr=Wiener(), skip=0
     ) where K
     ll_tot = loglikhd_obs(PP[1], y1)
     for i in eachindex(PP)
-        success, ll = rand!(rng, PP[i], XX[i], WW[i], v, y1, m; Wnr=Wnr)
+        success, ll = rand!(
+            rng, PP[i], XX[i], WW[i], v, y1, m; Wnr=Wnr, skip=skip
+        )
         success || return false, ll
         ll_tot += ll
         y1 = XX[i].x[end]
@@ -566,7 +568,7 @@ function Random.rand!(
         rng::Random.AbstractRNG,
         PP::AbstractArray{<:GuidProp},
         XX, WW, ::Val{:ll}, y1::K, ::Val{true};
-        Wnr=Wiener(),
+        Wnr=Wiener(), skip=0
     ) where K
     error("in-place not implemented")
 end
@@ -590,12 +592,12 @@ contribution) along the way.
 function Random.rand!(
         PP::AbstractArray{<:GuidProp},
         XX°, WW°, WW, ρρ, v::Val{:ll}, y1=zero(PP[1]);
-        Wnr=Wiener()
+        Wnr=Wiener(), skip=0
     )
     rand!(
         Random.GLOBAL_RNG,
         PP, XX°, WW°, WW, ρρ, v, y1, DD.ismutable(y1);
-        Wnr=Wnr
+        Wnr=Wnr, skip=skip
     )
 end
 
@@ -603,12 +605,12 @@ function Random.rand!(
         rng::Random.AbstractRNG,
         PP::AbstractArray{<:GuidProp},
         XX°, WW°, WW, ρρ, v::Val{:ll}, y1=zero(PP[1]);
-        Wnr=Wiener()
+        Wnr=Wiener(), skip=0
     )
     rand!(
         rng,
         PP, XX°, WW°, WW, ρρ, v, y1, DD.ismutable(y1);
-        Wnr=Wnr
+        Wnr=Wnr, skip=skip
     )
 end
 
@@ -616,12 +618,13 @@ function Random.rand!(
         rng::Random.AbstractRNG,
         PP::AbstractArray{<:GuidProp},
         XX°, WW°, WW, ρρ, v::Val{:ll}, y1::K, m::Val{false};
-        Wnr=Wiener(),
+        Wnr=Wiener(), skip=0
     ) where K
     ll_tot = loglikhd_obs(PP[1], y1)
     for i in eachindex(PP)
         success, ll = rand!(
-            rng, PP[i], XX°[i], WW°[i], WW[i], ρρ[i], v, y1, m; Wnr=Wnr
+            rng, PP[i], XX°[i], WW°[i], WW[i], ρρ[i], v, y1, m;
+            Wnr=Wnr, skip=skip
         )
         success || return false, ll
         ll_tot += ll
@@ -635,7 +638,7 @@ function Random.rand!(
         rng::Random.AbstractRNG,
         PP::AbstractArray{<:GuidProp},
         XX°, WW°, WW, ρρ, ::Val{:ll}, y1::K, ::Val{true};
-        Wnr=Wiener(),
+        Wnr=Wiener(), skip=0
     ) where K
     error("in-place not implemented")
 end

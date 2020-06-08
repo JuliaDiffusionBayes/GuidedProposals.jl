@@ -35,3 +35,16 @@ function static_accessor_HFc(u::K, ::Val{T}) where {K<:Union{SVector,MVector},T}
     #cidx = SVector{1,Int64}((T*T+T+1):(T*T+T+1))
     reshape(u[Hidx], Size(T,T)), u[Fidx], u[T*T+T+1]
 end
+
+
+@doc raw"""
+    standard_guid_prop_time_transf(tt)
+
+Standard time transformation used for guided proposals:
+```math
+τ: t → t_0 + (t-t_0)\frac{2 - (t-t_0)}{T-t_0},
+```
+applied to a vector `tt` where $t_0:=$`tt[1]` and $T:=$`tt[end]`
+"""
+standard_guid_prop_time_transf(tt) = τ(tt[1], tt[end]).(tt)
+τ(t₀,T) = (t) ->  t₀ + (t-t₀) * (2-(t-t₀)/(T-t₀))
