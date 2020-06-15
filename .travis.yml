@@ -16,8 +16,6 @@ jobs:
       julia: 1.4
       script: julia --project=docs -e '
           using Pkg;
-          Pkg.add(PackageSpec(url = "https://github.com/JuliaDiffusionBayes/DiffusionDefinition.jl"));
-          Pkg.add(PackageSpec(url = "https://github.com/JuliaDiffusionBayes/ObservationSchemes.jl"));
           Pkg.develop(PackageSpec(path=pwd()));
           Pkg.instantiate();
           include("docs/make.jl");'

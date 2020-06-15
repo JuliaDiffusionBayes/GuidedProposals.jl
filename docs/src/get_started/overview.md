@@ -4,9 +4,6 @@ The package is not registered yet. To install it write:
 ] add https://github.com/JuliaDiffusionBayes/GuidedProposals.jl
 ```
 
-!!! note
-    The package depends on [DiffusionDefinition.jl](https://github.com/JuliaDiffusionBayes/DiffusionDefinition.jl) and [ObservationSchemes.jl](https://github.com/JuliaDiffusionBayes/ObservationSchemes.jl), neither of which is registered yet. Install them in the same way as [GuidedProposals.jl](https://github.com/JuliaDiffusionBayes/GuidedProposals.jl).
-
 ## Define the law of a guided proposal
 -----------------
 The main object defined by this package is `GuidProp`. It allows for a definition of a [guided proposal](https://projecteuclid.org/euclid.bj/1494316837) [[arXiv](https://arxiv.org/abs/1311.3606)] with some target and auxiliary diffusion laws. To define it, use [DiffusionDefinition.jl](https://github.com/JuliaDiffusionBayes/DiffusionDefinition.jl) to define the unconditioned laws, [ObservationSchemes.jl](https://github.com/JuliaDiffusionBayes/ObservationSchemes.jl) to define the observation, and then, construct a `GuidProp`
