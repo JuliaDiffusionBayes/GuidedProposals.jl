@@ -16,8 +16,6 @@ function simple_smoothing_with_blocking(
     # time-grids for the forward-simulation of trajectories                    #
     # we pass a time-transformation for improved accuracy                      #
     tts = OBS.setup_time_grids(recording, dt, standard_guid_prop_time_transf)  #
-    # memory parameters for the preconditioned Crank-Nicolson scheme           #
-    ρρ = [ρ for _ in tts]                                                      #
     # laws of guided proposals (without any blocking)                          #
     PP = build_guid_prop(AuxLaw, recording, tts)                               #
                                                                                #
@@ -56,18 +54,18 @@ function simple_smoothing_with_blocking(
         view(x, (one_quarter_pt+1):(three_quarter_pt-offset)),                 #
         view(x, (three_quarter_pt+1):length(x))                                #
     ]                                                                          #
-    make_block_set(f) = (                                                      #
+    make_block_set(f, num_ρ=2) = (                                             #
         PP = f(PP, 1),                                                         #
         XX = f(XX),                                                            #
         XX° = f(XX°),                                                          #
         WW = f(WW),                                                            #
         WW° = f(WW°),                                                          #
-        ρρ = f(ρρ),                                                            #
+        ρρ = fill(ρ, num_ρ),                                                   #
     )                                                                          #
                                                                                #
     # define two sets of blocks                                                #
     B1 = make_block_set(block_set_1_builder)                                   #
-    B2 = make_block_set(block_set_2_builder)                                   #
+    B2 = make_block_set(block_set_2_builder, 3)                                #
                                                                                #
     # define guided proposals on the last interval of each block               #
     artif_PP1 = [                                                              #
@@ -118,7 +116,7 @@ function simple_smoothing_with_blocking(
                 y = B1.XX°[j][end-1].x[end]
                 _, ll°_last = rand!(
                     artif_PP1[1], B1.XX°[j][end], B1.WW°[j][end], B1.WW[j][end],
-                    B1.ρρ[j][end], Val(:ll), y; Wnr=Wnr
+                    B1.ρρ[j], Val(:ll), y; Wnr=Wnr
                 )
                 ll° += ll°_last
             end
@@ -177,7 +175,7 @@ function simple_smoothing_with_blocking(
                 y = B2.XX°[j][end-1].x[end]
                 _, ll°_last = rand!(
                     artif_PP2[j], B2.XX°[j][end], B2.WW°[j][end], B2.WW[j][end],
-                    B2.ρρ[j][end], Val(:ll), y; Wnr=Wnr
+                    B2.ρρ[j], Val(:ll), y; Wnr=Wnr
                 )
                 ll° += ll°_last
             end

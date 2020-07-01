@@ -42,7 +42,7 @@ end
 
 Standard time transformation used for guided proposals:
 ```math
-τ: t → t_0 + (t-t_0)\frac{2 - (t-t_0)}{T-t_0},
+τ: t → t_0 + (t-t_0)\left[2 - \frac{(t-t_0)}{T-t_0}\right],
 ```
 applied to a vector `tt` where $t_0:=$`tt[1]` and $T:=$`tt[end]`
 """

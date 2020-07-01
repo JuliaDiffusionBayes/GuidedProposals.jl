@@ -117,15 +117,13 @@ mutable struct Workspace{GP,TX,TW,TWnr,Ty1}
     XX°::Vector{TX}
     WW::Vector{TW}
     WW°::Vector{TW}
-    ρρ::Vector{Float64}
+    ρ::Float64
     Wnr::TWnr
     y1::Ty1
 
     function Workspace(AuxLaw, recording, dt, ρ)
         # time-grids for the forward-simulation of trajectories
         tts = OBS.setup_time_grids(recording, dt, standard_guid_prop_time_transf)
-        # memory parameters for the preconditioned Crank-Nicolson scheme
-        ρρ = [ρ for _ in tts]
         # laws of guided proposals
         PP = build_guid_prop(AuxLaw, recording, tts)
 
@@ -137,7 +135,7 @@ mutable struct Workspace{GP,TX,TW,TWnr,Ty1}
 
         # initialize the workspace
         new{eltype(PP),eltype(XX),eltype(WW),typeof(Wnr),typeof(y1)}(
-            PP, XX, XX°, WW, WW°, ρρ, Wnr, y1
+            PP, XX, XX°, WW, WW°, ρ, Wnr, y1
         )
     end
 end
@@ -147,7 +145,7 @@ We can also define two functions for `Workspace`: one which samples a proposal t
 ```julia
 function draw_proposal!(ws::Workspace)
     _, ll° = rand!(
-        ws.PP, ws.XX°, ws.WW°, ws.WW, ws.ρρ, Val(:ll), ws.y1;
+        ws.PP, ws.XX°, ws.WW°, ws.WW, ws.ρ, Val(:ll), ws.y1;
         Wnr=ws.Wnr
     )
     ll°

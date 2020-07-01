@@ -66,7 +66,7 @@ for i in 1:3
 end
 scatter!(p, [y1[1]],[y1[2]], markersize=8, label="starting point")
 for i in 1:3
-	  o = OBS.obs(recording.obs[i])
+    o = OBS.obs(recording.obs[i])
     scatter!(p, [o[1]], [o[2]]; label="observation $i", markersize=8, marker=:diamond, markercolor="orange")
 end
 display(p)
@@ -101,6 +101,6 @@ paths = simple_smoothing(P, y1)
 Perturbing Gaussian noise instead of sampling it anew works in exactly the same way as in the previous section.
 ```julia
 XX°, WW° = trajectory(PP)
-ρρ = [0.5, 0.8, 0.4] # one memory param for each interval
-rand!(PP, XX°, WW°, WW, ρρ, y1)
+ρ = 0.5 # one memory param for the entire interval
+rand!(PP, XX°, WW°, WW, ρ, y1)
 ```

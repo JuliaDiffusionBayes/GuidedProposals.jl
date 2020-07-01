@@ -452,18 +452,18 @@ end
 Sample a trajectory started from `y1` over multiple intervals for guided
 proposals `PP` that correspond to consecutive intervals. Use containers `XX°`
 and `WW°` to save the results. Use a preconditioned Crank-Nicolson scheme
-with memory parameters `ρρ` (one for each interval) and a previously sampled
+with memory parameter `ρ` (one for the entire interval) and a previously sampled
 Wiener noise `WW`. Compute the functionals `f` (one for each interval) at
 the time of sampling and store the results in `f_out`.
 """
 function Random.rand!(
         PP::AbstractArray{<:GuidProp},
-        XX°, WW°, WW, ρρ, y1=zero(PP[1]);
+        XX°, WW°, WW, ρ, y1=zero(PP[1]);
         f=DD.__DEFAULT_F, f_out=DD.__DEFAULT_F, Wnr=Wiener()
     )
     rand!(
         Random.GLOBAL_RNG,
-        PP, XX°, WW°, WW, ρρ, y1, DD.ismutable(y1);
+        PP, XX°, WW°, WW, ρ, y1, DD.ismutable(y1);
         f=f, f_out=f_out, Wnr=Wnr
     )
 end
@@ -471,12 +471,12 @@ end
 function Random.rand!(
         rng::Random.AbstractRNG,
         PP::AbstractArray{<:GuidProp},
-        XX°, WW°, WW, ρρ, y1=zero(PP[1]);
+        XX°, WW°, WW, ρ, y1=zero(PP[1]);
         f=DD.__DEFAULT_F, f_out=DD.__DEFAULT_F, Wnr=Wiener()
     )
     rand!(
         rng,
-        PP, XX°, WW°, WW, ρρ, y1, DD.ismutable(y1);
+        PP, XX°, WW°, WW, ρ, y1, DD.ismutable(y1);
         f=f, f_out=f_out, Wnr=Wnr
     )
 end
@@ -484,12 +484,12 @@ end
 function Random.rand!(
         rng::Random.AbstractRNG,
         PP::AbstractArray{<:GuidProp},
-        XX°, WW°, WW, ρρ, y1::K, v::Val{false};
+        XX°, WW°, WW, ρ, y1::K, v::Val{false};
         f=DD.__DEFAULT_F, f_out=DD.__DEFAULT_F, Wnr=Wiener(),
     ) where K
     for i in eachindex(PP)
         success, f_out[i] = rand!(
-            rng, PP[i], XX°[i], WW°[i], WW[i], ρρ[i], y1, v; f=f[i], Wnr=Wnr
+            rng, PP[i], XX°[i], WW°[i], WW[i], ρ, y1, v; f=f[i], Wnr=Wnr
         )
         success || return false
         y1 = XX°[i].x[end]
@@ -500,7 +500,7 @@ end
 function Random.rand!(
         rng::Random.AbstractRNG,
         PP::AbstractArray{<:GuidProp},
-        XX°, WW°, WW, ρρ, y1::K, v::Val{true};
+        XX°, WW°, WW, ρ, y1::K, v::Val{true};
         f=DD.__DEFAULT_F, f_out=DD.__DEFAULT_F, Wnr=Wiener(),
     ) where K
     error("in-place not implemented")
@@ -585,18 +585,18 @@ end
 Sample a trajectory started from `y1` over multiple intervals for guided
 proposals `PP` that correspond to consecutive intervals. Use containers `XX°`
 and `WW°` to save the results. Use a preconditioned Crank-Nicolson scheme
-with memory parameters `ρρ` (one for each interval) and a previously sampled
-Wiener noise `WW`. Compute log-likelihood (path contribution AND end-points
-contribution) along the way.
+with memory parameters `ρ` (one for the entire interval) and a previously
+sampled Wiener noise `WW`. Compute log-likelihood (path contribution AND
+end-points contribution) along the way.
 """
 function Random.rand!(
         PP::AbstractArray{<:GuidProp},
-        XX°, WW°, WW, ρρ, v::Val{:ll}, y1=zero(PP[1]);
+        XX°, WW°, WW, ρ, v::Val{:ll}, y1=zero(PP[1]);
         Wnr=Wiener(), skip=0
     )
     rand!(
         Random.GLOBAL_RNG,
-        PP, XX°, WW°, WW, ρρ, v, y1, DD.ismutable(y1);
+        PP, XX°, WW°, WW, ρ, v, y1, DD.ismutable(y1);
         Wnr=Wnr, skip=skip
     )
 end
@@ -604,12 +604,12 @@ end
 function Random.rand!(
         rng::Random.AbstractRNG,
         PP::AbstractArray{<:GuidProp},
-        XX°, WW°, WW, ρρ, v::Val{:ll}, y1=zero(PP[1]);
+        XX°, WW°, WW, ρ, v::Val{:ll}, y1=zero(PP[1]);
         Wnr=Wiener(), skip=0
     )
     rand!(
         rng,
-        PP, XX°, WW°, WW, ρρ, v, y1, DD.ismutable(y1);
+        PP, XX°, WW°, WW, ρ, v, y1, DD.ismutable(y1);
         Wnr=Wnr, skip=skip
     )
 end
@@ -617,13 +617,13 @@ end
 function Random.rand!(
         rng::Random.AbstractRNG,
         PP::AbstractArray{<:GuidProp},
-        XX°, WW°, WW, ρρ, v::Val{:ll}, y1::K, m::Val{false};
+        XX°, WW°, WW, ρ, v::Val{:ll}, y1::K, m::Val{false};
         Wnr=Wiener(), skip=0
     ) where K
     ll_tot = loglikhd_obs(PP[1], y1)
     for i in eachindex(PP)
         success, ll = rand!(
-            rng, PP[i], XX°[i], WW°[i], WW[i], ρρ[i], v, y1, m;
+            rng, PP[i], XX°[i], WW°[i], WW[i], ρ, v, y1, m;
             Wnr=Wnr, skip=skip
         )
         success || return false, ll
@@ -637,7 +637,7 @@ end
 function Random.rand!(
         rng::Random.AbstractRNG,
         PP::AbstractArray{<:GuidProp},
-        XX°, WW°, WW, ρρ, ::Val{:ll}, y1::K, ::Val{true};
+        XX°, WW°, WW, ρ, ::Val{:ll}, y1::K, ::Val{true};
         Wnr=Wiener(), skip=0
     ) where K
     error("in-place not implemented")

@@ -47,10 +47,11 @@ See [the documentation](https://juliadiffusionbayes.github.io/GuidedProposals.jl
 
 ## Related
 
-ObservationSchemes.jl belongs to a suite of packages in [JuliaDiffusionBayes](https://github.com/JuliaDiffusionBayes), whose aim is to facilitate Bayesian inference for diffusion processes. Some other packages in this suite are as follows:
+GuidedProposals.jl belongs to a suite of packages in [JuliaDiffusionBayes](https://github.com/JuliaDiffusionBayes), whose aim is to facilitate Bayesian inference for diffusion processes. Some other packages in this suite are as follows:
 - [DiffusionDefinition.jl](https://github.com/JuliaDiffusionBayes/DiffusionDefinition.jl): define diffusion processes and sample from their laws
 - [ObservationSchemes.jl](https://github.com/JuliaDiffusionBayes/ObservationSchemes.jl): a systematic way of encoding discrete-time observations for stochastic processes
 - [ExtensibleMCMC.jl](https://github.com/JuliaDiffusionBayes/ExtensibleMCMC.jl): a modular implementation of the Markov chain Monte Carlo (MCMC) algorithms
+- [DiffusionMCMCTools.jl](https://github.com/JuliaDiffusionBayes/DiffusionMCMCTools.jl): utility methods that facilitate easier coding solutions for smoothing and inference algorithms for diffusions
 - [DiffusionMCMC.jl](https://github.com/JuliaDiffusionBayes/DiffusionMCMC.jl): Markov chain Monte Carlo (MCMC) algorithms for doing inference for diffusion processes
 
 ## License

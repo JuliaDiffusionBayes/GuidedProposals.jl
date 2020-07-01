@@ -88,7 +88,7 @@ struct GuidProp{K,DP,DW,SS,R,R2,O,S,T} <: DD.DiffusionProcess{K,DP,DW,SS}
             );
             next_guided_prop=nothing,
         ) where {R<:DD.DiffusionProcess,TR2<:DD.DiffusionProcess,O<:OBS.Observation}
-        @assert tt[end] == obs.t
+        @assert tt[end] ≈ obs.t
 
         P_target = deepcopy(_P_target)
 
@@ -585,3 +585,46 @@ function build_artif_obs(obs, proto_obs, ϵ)
         full_obs=true
     )
 end
+
+function guid_prop_for_blocking(
+        PP::AbstractArray{<:GuidProp},
+        AuxLaw=remove_curly(R2),
+        artificial_noise=1e-11,
+        solver_choice=(
+            solver=Tsit5(),
+            ode_type=:HFc,
+            convert_to_HFc=false,
+            mode=:outofplace,
+            gradients=false,
+            eltype=Float64,
+        )
+    )
+    N = length(PP)
+    _guid_prop_for_blocking(
+        PP,
+        _vec_me(AuxLaw, N),
+        _vec_me(artificial_noise, N),
+        _vec_me(solver_choice, N)
+    )
+end
+
+_vec_me(item, N) = fill(item, N)
+_vec_me(item::AbstractArray, N) = item
+
+function _guid_prop_for_blocking(
+        PP::AbstractArray{<:GuidProp},
+        AuxLaws,
+        artificial_noises,
+        solver_choices,
+    )
+    map(
+        i->guid_prop_for_blocking(
+            PP[i], AuxLaws[i], artificial_noises[i], solver_choices[i]
+        ),
+        1:length(PP)
+    )
+end
+
+DD.Wiener(P::GuidProp) = Wiener(P.P_target)
+
+DD.Wiener(PP::AbstractArray{<:GuidProp}) = Wiener(PP[1])

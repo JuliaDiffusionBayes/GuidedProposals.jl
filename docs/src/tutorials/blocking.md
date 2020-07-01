@@ -35,7 +35,7 @@ mutable struct Block{GP,GPl,TX,TW,TWnr,Ty1}
     XX°::TVIEW{TX}
     WW::TVIEW{TW}
     WW°::TVIEW{TW}
-    ρρ::TVIEW{Float64}
+    ρ::Float64
     Wnr::TWnr
     y1::Ty1
 
@@ -44,7 +44,8 @@ mutable struct Block{GP,GPl,TX,TW,TWnr,Ty1}
             range::UnitRange{Int64},
             AuxLawBlocking,
             artificial_noise=1e-11,
-            last_block=false
+            last_block=false,
+            ρ = ws.ρ
         ) where {GP,TX,TW,TWnr,Ty1}
         PP = view(ws.PP, range[1]:(range[end]-!last_block)) # omit the last law
         P_last = (
@@ -59,10 +60,9 @@ mutable struct Block{GP,GPl,TX,TW,TWnr,Ty1}
         XX° = view(ws.XX°, range)
         WW = view(ws.WW, range)
         WW° = view(ws.WW°, range)
-        ρρ = view(ws.ρρ, range)
 
         new{GP,typeof(P_last),TX,TW,TWnr,Ty1}(
-            PP, P_last, XX, XX°, WW, WW°, ρρ, ws.Wnr, deepcopy(ws.y1)
+            PP, P_last, XX, XX°, WW, WW°, ρ, ws.Wnr, deepcopy(ws.y1)
         )
     end
 end
@@ -74,11 +74,11 @@ As in the case of smoothing, we should also declare how the sampling of paths sh
 # NOT the last block
 function draw_proposal!(b::Block)
     # sample a path on a given block
-    _, ll° = rand!(b.PP, b.XX°, b.WW°, b.WW, b.ρρ, Val(:ll), b.y1; Wnr=b.Wnr)
+    _, ll° = rand!(b.PP, b.XX°, b.WW°, b.WW, b.ρ, Val(:ll), b.y1; Wnr=b.Wnr)
     # sample the last segment using a different law
     y = b.XX°[end-1].x[end]
     _, ll°_last = rand!(
-        b.P_last, b.XX°[end], b.WW°[end], b.WW[end], b.ρρ[end], Val(:ll), y;
+        b.P_last, b.XX°[end], b.WW°[end], b.WW[end], b.ρ, Val(:ll), y;
         Wnr=b.Wnr
     )
     ll° + ll°_last
@@ -87,7 +87,7 @@ end
 # the last block
 function draw_proposal!(b::Block{GP,Nothing}) where GP
     # sample a path on a given block
-    _, ll° = rand!(b.PP, b.XX°, b.WW°, b.WW, b.ρρ, Val(:ll), b.y1; Wnr=b.Wnr)
+    _, ll° = rand!(b.PP, b.XX°, b.WW°, b.WW, b.ρ, Val(:ll), b.y1; Wnr=b.Wnr)
     ll°
 end
 
@@ -325,15 +325,13 @@ mutable struct Workspace{GP,TX,TW,TWnr,Ty1}
     XX°::Vector{TX}
     WW::Vector{TW}
     WW°::Vector{TW}
-    ρρ::Vector{Float64}
+    ρ::Float64
     Wnr::TWnr
     y1::Ty1
 
     function Workspace(AuxLaw, recording, dt, ρ)
         # time-grids for the forward-simulation of trajectories
         tts = OBS.setup_time_grids(recording, dt, standard_guid_prop_time_transf)
-        # memory parameters for the preconditioned Crank-Nicolson scheme
-        ρρ = [ρ for _ in tts]
         # laws of guided proposals
         PP = build_guid_prop(AuxLaw, recording, tts)
 
@@ -345,7 +343,7 @@ mutable struct Workspace{GP,TX,TW,TWnr,Ty1}
 
         # initialize the workspace
         new{eltype(PP),eltype(XX),eltype(WW),typeof(Wnr),typeof(y1)}(
-            PP, XX, XX°, WW, WW°, ρρ, Wnr, y1
+            PP, XX, XX°, WW, WW°, ρ, Wnr, y1
         )
     end
 end
@@ -363,7 +361,7 @@ mutable struct Block{GP,GPl,TX,TW,TWnr,Ty1}
     XX°::TVIEW{TX}
     WW::TVIEW{TW}
     WW°::TVIEW{TW}
-    ρρ::TVIEW{Float64}
+    ρ::Float64
     Wnr::TWnr
     y1::Ty1
 
@@ -372,7 +370,8 @@ mutable struct Block{GP,GPl,TX,TW,TWnr,Ty1}
             range::UnitRange{Int64},
             AuxLawBlocking,
             artificial_noise=1e-11,
-            last_block=false
+            last_block=false,
+            ρ = ws.ρ
         ) where {GP,TX,TW,TWnr,Ty1}
         PP = view(ws.PP, range[1]:(range[end]-!last_block)) # omit the last law
         P_last = (
@@ -387,10 +386,9 @@ mutable struct Block{GP,GPl,TX,TW,TWnr,Ty1}
         XX° = view(ws.XX°, range)
         WW = view(ws.WW, range)
         WW° = view(ws.WW°, range)
-        ρρ = view(ws.ρρ, range)
 
         new{GP,typeof(P_last),TX,TW,TWnr,Ty1}(
-            PP, P_last, XX, XX°, WW, WW°, ρρ, ws.Wnr, deepcopy(ws.y1)
+            PP, P_last, XX, XX°, WW, WW°, ρ, ws.Wnr, deepcopy(ws.y1)
         )
     end
 end
@@ -398,11 +396,11 @@ end
 # NOT the last block
 function draw_proposal!(b::Block)
     # sample a path on a given block
-    _, ll° = rand!(b.PP, b.XX°, b.WW°, b.WW, b.ρρ, Val(:ll), b.y1; Wnr=b.Wnr)
+    _, ll° = rand!(b.PP, b.XX°, b.WW°, b.WW, b.ρ, Val(:ll), b.y1; Wnr=b.Wnr)
     # sample the last segment using a different law
     y = b.XX°[end-1].x[end]
     _, ll°_last = rand!(
-        b.P_last, b.XX°[end], b.WW°[end], b.WW[end], b.ρρ[end], Val(:ll), y;
+        b.P_last, b.XX°[end], b.WW°[end], b.WW[end], b.ρ, Val(:ll), y;
         Wnr=b.Wnr
     )
     ll° + ll°_last
@@ -411,7 +409,7 @@ end
 # the last block
 function draw_proposal!(b::Block{GP,Nothing}) where GP
     # sample a path on a given block
-    _, ll° = rand!(b.PP, b.XX°, b.WW°, b.WW, b.ρρ, Val(:ll), b.y1; Wnr=b.Wnr)
+    _, ll° = rand!(b.PP, b.XX°, b.WW°, b.WW, b.ρ, Val(:ll), b.y1; Wnr=b.Wnr)
     ll°
 end
 

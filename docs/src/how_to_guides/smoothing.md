@@ -11,8 +11,6 @@ function simple_smoothing(AuxLaw, recording, dt; ρ=0.5, num_steps=10^4)
     # -------------------------------------------------------------------------#
     # time-grids for the forward-simulation of trajectories                    #
     tts = OBS.setup_time_grids(recording, dt)                                  #
-    # memory parameters for the preconditioned Crank-Nicolson scheme           #
-    ρρ = [ρ for _ in tts]                                                      #
     # laws of guided proposals                                                 #
     PP = build_guid_prop(AuxLaw, recording, tts)                               #
                                                                                #
@@ -32,7 +30,7 @@ function simple_smoothing(AuxLaw, recording, dt; ρ=0.5, num_steps=10^4)
     # MCMC
     for i in 1:num_steps
         # impute a path
-        _, ll° = rand!(PP, XX°, WW°, WW, ρρ, Val(:ll), y1; Wnr=Wnr)
+        _, ll° = rand!(PP, XX°, WW°, WW, ρ, Val(:ll), y1; Wnr=Wnr)
 
         # Metropolis–Hastings accept/reject step
         if rand() < exp(ll°-ll)

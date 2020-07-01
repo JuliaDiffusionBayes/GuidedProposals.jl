@@ -74,7 +74,6 @@ end
 function simple_inference(AuxLaw, recording, dt, θ; ρ=0.5, num_steps=10^4)
 	# initializations
 	tts = OBS.setup_time_grids(recording, dt)
-	ρρ = [ρ for _ in tts]
 	PP = build_guid_prop(AuxLaw, recording, tts)
 	PP° = deepcopy(PP)
 
@@ -91,7 +90,7 @@ function simple_inference(AuxLaw, recording, dt, θ; ρ=0.5, num_steps=10^4)
 	# MCMC
 	for i in 1:num_steps
 		# impute a path
-		_, ll° = rand!(PP, XX°, WW°, WW, ρρ, Val(:ll), y1; Wnr=Wnr)
+		_, ll° = rand!(PP, XX°, WW°, WW, ρ, Val(:ll), y1; Wnr=Wnr)
 
 		if rand() < exp(ll°-ll)
 			XX, WW, XX°, WW° = XX°, WW°, XX, WW
