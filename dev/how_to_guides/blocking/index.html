@@ -12,8 +12,6 @@ function simple_smoothing_with_blocking(
     # time-grids for the forward-simulation of trajectories                    #
     # we pass a time-transformation for improved accuracy                      #
     tts = OBS.setup_time_grids(recording, dt, standard_guid_prop_time_transf)  #
-    # memory parameters for the preconditioned Crank-Nicolson scheme           #
-    ρρ = [ρ for _ in tts]                                                      #
     # laws of guided proposals (without any blocking)                          #
     PP = build_guid_prop(AuxLaw, recording, tts)                               #
                                                                                #
@@ -52,18 +50,18 @@ function simple_smoothing_with_blocking(
         view(x, (one_quarter_pt+1):(three_quarter_pt-offset)),                 #
         view(x, (three_quarter_pt+1):length(x))                                #
     ]                                                                          #
-    make_block_set(f) = (                                                      #
+    make_block_set(f, num_ρ=2) = (                                             #
         PP = f(PP, 1),                                                         #
         XX = f(XX),                                                            #
         XX° = f(XX°),                                                          #
         WW = f(WW),                                                            #
         WW° = f(WW°),                                                          #
-        ρρ = f(ρρ),                                                            #
+        ρρ = fill(ρ, num_ρ),                                                   #
     )                                                                          #
                                                                                #
     # define two sets of blocks                                                #
     B1 = make_block_set(block_set_1_builder)                                   #
-    B2 = make_block_set(block_set_2_builder)                                   #
+    B2 = make_block_set(block_set_2_builder, 3)                                #
                                                                                #
     # define guided proposals on the last interval of each block               #
     artif_PP1 = [                                                              #
@@ -114,7 +112,7 @@ function simple_smoothing_with_blocking(
                 y = B1.XX°[j][end-1].x[end]
                 _, ll°_last = rand!(
                     artif_PP1[1], B1.XX°[j][end], B1.WW°[j][end], B1.WW[j][end],
-                    B1.ρρ[j][end], Val(:ll), y; Wnr=Wnr
+                    B1.ρρ[j], Val(:ll), y; Wnr=Wnr
                 )
                 ll° += ll°_last
             end
@@ -173,7 +171,7 @@ function simple_smoothing_with_blocking(
                 y = B2.XX°[j][end-1].x[end]
                 _, ll°_last = rand!(
                     artif_PP2[j], B2.XX°[j][end], B2.WW°[j][end], B2.WW[j][end],
-                    B2.ρρ[j][end], Val(:ll), y; Wnr=Wnr
+                    B2.ρρ[j], Val(:ll), y; Wnr=Wnr
                 )
                 ll° += ll°_last
             end
@@ -218,4 +216,4 @@ function simple_smoothing_with_blocking(
 end</code></pre><h3 id="Example-1"><a class="docs-heading-anchor" href="#Example-1">Example</a><a class="docs-heading-anchor-permalink" href="#Example-1" title="Permalink"></a></h3><p>We can apply the routine above to the example used also in <a href="../smoothing/#how_to_smoothing-1">the previous how-to-guide on smoothing</a>. Before doing so however, we must additionally override the behaviour of <code>nonhypo</code> and <code>nonhypo_σ</code> functions from the package <a href="https://github.com/JuliaDiffusionBayes/DiffusionDefinition.jl">DiffusionDefinition.jl</a>.</p><pre><code class="language-julia">@inline DD.nonhypo(x, P::FitzHughNagumo) = x[SVector{1,Int64}(2)]
 @inline DD.nonhypo_σ(t::Float64, x, P::FitzHughNagumo) = SMatrix{1,1,Float64}(P.σ)</code></pre><p>We are now ready to run the algorithm</p><pre><code class="language-julia">paths = simple_smoothing_with_blocking(
     FitzHughNagumoAux, recording, 0.001; ρ=0.84, num_steps=10^4, artificial_noise=1e-12
-)</code></pre><p><img src="../../assets/how_to/blocking/paths.png" alt="paths"/> It takes about 50sec on my laptop.</p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../smoothing/">« ...smooth trajectories</a><a class="docs-footer-nextpage" href="../parameter_inference/">...infer parameters »</a></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Monday 15 June 2020 18:58">Monday 15 June 2020</span>. Using Julia version 1.4.2.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+)</code></pre><p><img src="../../assets/how_to/blocking/paths.png" alt="paths"/> It takes about 50sec on my laptop.</p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../smoothing/">« ...smooth trajectories</a><a class="docs-footer-nextpage" href="../parameter_inference/">...infer parameters »</a></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Wednesday 1 July 2020 10:19">Wednesday 1 July 2020</span>. Using Julia version 1.4.2.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

@@ -7,8 +7,6 @@ function simple_smoothing(AuxLaw, recording, dt; ρ=0.5, num_steps=10^4)
     # -------------------------------------------------------------------------#
     # time-grids for the forward-simulation of trajectories                    #
     tts = OBS.setup_time_grids(recording, dt)                                  #
-    # memory parameters for the preconditioned Crank-Nicolson scheme           #
-    ρρ = [ρ for _ in tts]                                                      #
     # laws of guided proposals                                                 #
     PP = build_guid_prop(AuxLaw, recording, tts)                               #
                                                                                #
@@ -28,7 +26,7 @@ function simple_smoothing(AuxLaw, recording, dt; ρ=0.5, num_steps=10^4)
     # MCMC
     for i in 1:num_steps
         # impute a path
-        _, ll° = rand!(PP, XX°, WW°, WW, ρρ, Val(:ll), y1; Wnr=Wnr)
+        _, ll° = rand!(PP, XX°, WW°, WW, ρ, Val(:ll), y1; Wnr=Wnr)
 
         # Metropolis–Hastings accept/reject step
         if rand() &lt; exp(ll°-ll)
@@ -50,4 +48,4 @@ function simple_smoothing(AuxLaw, recording, dt; ρ=0.5, num_steps=10^4)
 end</code></pre><h3 id="Example-1"><a class="docs-heading-anchor" href="#Example-1">Example</a><a class="docs-heading-anchor-permalink" href="#Example-1" title="Permalink"></a></h3><p>For instance, for a partially observed FitzHugh–Nagumo model</p><pre><code class="language-julia">recording = ...
 paths = simple_smoothing(
     FitzHughNagumoAux, recording, 0.001; ρ=0.96, num_steps=10^4
-)</code></pre><p><img src="../../assets/how_to/smoothing/paths.png" alt="paths"/></p><p>It takes about 6sec on my laptop.</p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../first_passage_time/">« (TODO) Sample diffusions in first-passage time setting</a><a class="docs-footer-nextpage" href="../blocking/">...do blocking »</a></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Monday 15 June 2020 18:58">Monday 15 June 2020</span>. Using Julia version 1.4.2.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+)</code></pre><p><img src="../../assets/how_to/smoothing/paths.png" alt="paths"/></p><p>It takes about 6sec on my laptop.</p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../first_passage_time/">« (TODO) Sample diffusions in first-passage time setting</a><a class="docs-footer-nextpage" href="../blocking/">...do blocking »</a></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Wednesday 1 July 2020 10:19">Wednesday 1 July 2020</span>. Using Julia version 1.4.2.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

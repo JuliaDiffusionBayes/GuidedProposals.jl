@@ -37,15 +37,13 @@ scatter!(map(x-&gt;x[1], data), map(x-&gt;x[2], data), label=&quot;data&quot;)</
     XX°::Vector{TX}
     WW::Vector{TW}
     WW°::Vector{TW}
-    ρρ::Vector{Float64}
+    ρ::Float64
     Wnr::TWnr
     y1::Ty1
 
     function Workspace(AuxLaw, recording, dt, ρ)
         # time-grids for the forward-simulation of trajectories
         tts = OBS.setup_time_grids(recording, dt, standard_guid_prop_time_transf)
-        # memory parameters for the preconditioned Crank-Nicolson scheme
-        ρρ = [ρ for _ in tts]
         # laws of guided proposals
         PP = build_guid_prop(AuxLaw, recording, tts)
 
@@ -57,12 +55,12 @@ scatter!(map(x-&gt;x[1], data), map(x-&gt;x[2], data), label=&quot;data&quot;)</
 
         # initialize the workspace
         new{eltype(PP),eltype(XX),eltype(WW),typeof(Wnr),typeof(y1)}(
-            PP, XX, XX°, WW, WW°, ρρ, Wnr, y1
+            PP, XX, XX°, WW, WW°, ρ, Wnr, y1
         )
     end
 end</code></pre><p>We can also define two functions for <code>Workspace</code>: one which samples a proposal trajectory using a preconditioned Crank—Nicolson scheme and computes the log-likelihood, and another, that swaps relevant containers in an event that the proposal is accepted:</p><pre><code class="language-julia">function draw_proposal!(ws::Workspace)
     _, ll° = rand!(
-        ws.PP, ws.XX°, ws.WW°, ws.WW, ws.ρρ, Val(:ll), ws.y1;
+        ws.PP, ws.XX°, ws.WW°, ws.WW, ws.ρ, Val(:ll), ws.y1;
         Wnr=ws.Wnr
     )
     ll°
@@ -262,4 +260,4 @@ for path in convenient_paths
 end
 plot!(X, Val(:vs_time), color=[col[5] col[4]], linewidth=[3 0.5], label=[&quot;underlying X₁&quot; &quot;underlying X₂&quot;])
 scatter!(p, map(x-&gt;x[1], data), map(x-&gt;x[2], data), label=&quot;data&quot;, markercolor=col[5])
-display(p)</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../in_place_vs_out_of_place/">« (TODO) Understanding in-place vs out-of-place</a><a class="docs-footer-nextpage" href="../blocking/">Setting up a blocking scheme for a simple smoothing problem »</a></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Monday 15 June 2020 18:58">Monday 15 June 2020</span>. Using Julia version 1.4.2.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+display(p)</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../in_place_vs_out_of_place/">« (TODO) Understanding in-place vs out-of-place</a><a class="docs-footer-nextpage" href="../blocking/">Setting up a blocking scheme for a simple smoothing problem »</a></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Wednesday 1 July 2020 10:19">Wednesday 1 July 2020</span>. Using Julia version 1.4.2.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

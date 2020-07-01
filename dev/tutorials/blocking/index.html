@@ -8,7 +8,7 @@ mutable struct Block{GP,GPl,TX,TW,TWnr,Ty1}
     XX°::TVIEW{TX}
     WW::TVIEW{TW}
     WW°::TVIEW{TW}
-    ρρ::TVIEW{Float64}
+    ρ::Float64
     Wnr::TWnr
     y1::Ty1
 
@@ -17,7 +17,8 @@ mutable struct Block{GP,GPl,TX,TW,TWnr,Ty1}
             range::UnitRange{Int64},
             AuxLawBlocking,
             artificial_noise=1e-11,
-            last_block=false
+            last_block=false,
+            ρ = ws.ρ
         ) where {GP,TX,TW,TWnr,Ty1}
         PP = view(ws.PP, range[1]:(range[end]-!last_block)) # omit the last law
         P_last = (
@@ -32,20 +33,19 @@ mutable struct Block{GP,GPl,TX,TW,TWnr,Ty1}
         XX° = view(ws.XX°, range)
         WW = view(ws.WW, range)
         WW° = view(ws.WW°, range)
-        ρρ = view(ws.ρρ, range)
 
         new{GP,typeof(P_last),TX,TW,TWnr,Ty1}(
-            PP, P_last, XX, XX°, WW, WW°, ρρ, ws.Wnr, deepcopy(ws.y1)
+            PP, P_last, XX, XX°, WW, WW°, ρ, ws.Wnr, deepcopy(ws.y1)
         )
     end
 end</code></pre><p>As in the case of smoothing, we should also declare how the sampling of paths should look like, as well as how the containers should be swapped in case of acceptance. The first procedure will differ a little depending on whether we work with the last block or not:</p><pre><code class="language-julia"># NOT the last block
 function draw_proposal!(b::Block)
     # sample a path on a given block
-    _, ll° = rand!(b.PP, b.XX°, b.WW°, b.WW, b.ρρ, Val(:ll), b.y1; Wnr=b.Wnr)
+    _, ll° = rand!(b.PP, b.XX°, b.WW°, b.WW, b.ρ, Val(:ll), b.y1; Wnr=b.Wnr)
     # sample the last segment using a different law
     y = b.XX°[end-1].x[end]
     _, ll°_last = rand!(
-        b.P_last, b.XX°[end], b.WW°[end], b.WW[end], b.ρρ[end], Val(:ll), y;
+        b.P_last, b.XX°[end], b.WW°[end], b.WW[end], b.ρ, Val(:ll), y;
         Wnr=b.Wnr
     )
     ll° + ll°_last
@@ -54,7 +54,7 @@ end
 # the last block
 function draw_proposal!(b::Block{GP,Nothing}) where GP
     # sample a path on a given block
-    _, ll° = rand!(b.PP, b.XX°, b.WW°, b.WW, b.ρρ, Val(:ll), b.y1; Wnr=b.Wnr)
+    _, ll° = rand!(b.PP, b.XX°, b.WW°, b.WW, b.ρ, Val(:ll), b.y1; Wnr=b.Wnr)
     ll°
 end
 
@@ -221,15 +221,13 @@ mutable struct Workspace{GP,TX,TW,TWnr,Ty1}
     XX°::Vector{TX}
     WW::Vector{TW}
     WW°::Vector{TW}
-    ρρ::Vector{Float64}
+    ρ::Float64
     Wnr::TWnr
     y1::Ty1
 
     function Workspace(AuxLaw, recording, dt, ρ)
         # time-grids for the forward-simulation of trajectories
         tts = OBS.setup_time_grids(recording, dt, standard_guid_prop_time_transf)
-        # memory parameters for the preconditioned Crank-Nicolson scheme
-        ρρ = [ρ for _ in tts]
         # laws of guided proposals
         PP = build_guid_prop(AuxLaw, recording, tts)
 
@@ -241,7 +239,7 @@ mutable struct Workspace{GP,TX,TW,TWnr,Ty1}
 
         # initialize the workspace
         new{eltype(PP),eltype(XX),eltype(WW),typeof(Wnr),typeof(y1)}(
-            PP, XX, XX°, WW, WW°, ρρ, Wnr, y1
+            PP, XX, XX°, WW, WW°, ρ, Wnr, y1
         )
     end
 end
@@ -259,7 +257,7 @@ mutable struct Block{GP,GPl,TX,TW,TWnr,Ty1}
     XX°::TVIEW{TX}
     WW::TVIEW{TW}
     WW°::TVIEW{TW}
-    ρρ::TVIEW{Float64}
+    ρ::Float64
     Wnr::TWnr
     y1::Ty1
 
@@ -268,7 +266,8 @@ mutable struct Block{GP,GPl,TX,TW,TWnr,Ty1}
             range::UnitRange{Int64},
             AuxLawBlocking,
             artificial_noise=1e-11,
-            last_block=false
+            last_block=false,
+            ρ = ws.ρ
         ) where {GP,TX,TW,TWnr,Ty1}
         PP = view(ws.PP, range[1]:(range[end]-!last_block)) # omit the last law
         P_last = (
@@ -283,10 +282,9 @@ mutable struct Block{GP,GPl,TX,TW,TWnr,Ty1}
         XX° = view(ws.XX°, range)
         WW = view(ws.WW, range)
         WW° = view(ws.WW°, range)
-        ρρ = view(ws.ρρ, range)
 
         new{GP,typeof(P_last),TX,TW,TWnr,Ty1}(
-            PP, P_last, XX, XX°, WW, WW°, ρρ, ws.Wnr, deepcopy(ws.y1)
+            PP, P_last, XX, XX°, WW, WW°, ρ, ws.Wnr, deepcopy(ws.y1)
         )
     end
 end
@@ -294,11 +292,11 @@ end
 # NOT the last block
 function draw_proposal!(b::Block)
     # sample a path on a given block
-    _, ll° = rand!(b.PP, b.XX°, b.WW°, b.WW, b.ρρ, Val(:ll), b.y1; Wnr=b.Wnr)
+    _, ll° = rand!(b.PP, b.XX°, b.WW°, b.WW, b.ρ, Val(:ll), b.y1; Wnr=b.Wnr)
     # sample the last segment using a different law
     y = b.XX°[end-1].x[end]
     _, ll°_last = rand!(
-        b.P_last, b.XX°[end], b.WW°[end], b.WW[end], b.ρρ[end], Val(:ll), y;
+        b.P_last, b.XX°[end], b.WW°[end], b.WW[end], b.ρ, Val(:ll), y;
         Wnr=b.Wnr
     )
     ll° + ll°_last
@@ -307,7 +305,7 @@ end
 # the last block
 function draw_proposal!(b::Block{GP,Nothing}) where GP
     # sample a path on a given block
-    _, ll° = rand!(b.PP, b.XX°, b.WW°, b.WW, b.ρρ, Val(:ll), b.y1; Wnr=b.Wnr)
+    _, ll° = rand!(b.PP, b.XX°, b.WW°, b.WW, b.ρ, Val(:ll), b.y1; Wnr=b.Wnr)
     ll°
 end
 
@@ -473,4 +471,4 @@ for path in convenient_paths
 end
 plot!(X, Val(:vs_time), color=[col[5] col[4]], linewidth=[3 0.5], label=[&quot;underlying X₁&quot; &quot;underlying X₂&quot;])
 scatter!(p, map(x-&gt;x[1], data), map(x-&gt;x[2], data), label=&quot;data&quot;, markercolor=col[5])
-display(p)</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../smoothing/">« Smoothing trajectories of the partially observed FitzHugh–Nagumo diffusion</a><a class="docs-footer-nextpage" href="../parameter_inference/">Parameter inference »</a></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Monday 15 June 2020 18:58">Monday 15 June 2020</span>. Using Julia version 1.4.2.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+display(p)</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../smoothing/">« Smoothing trajectories of the partially observed FitzHugh–Nagumo diffusion</a><a class="docs-footer-nextpage" href="../parameter_inference/">Parameter inference »</a></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Wednesday 1 July 2020 10:19">Wednesday 1 July 2020</span>. Using Julia version 1.4.2.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
