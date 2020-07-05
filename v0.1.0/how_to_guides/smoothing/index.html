@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>...smooth trajectories · GuidedProposals.jl</title><link href="https://fonts.googleapis.com/css?family=Lato|Roboto+Mono" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.11.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.11.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.11.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.11.1/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><a class="docs-logo" href="../../"><img src="../../assets/logo.png" alt="GuidedProposals.jl logo"/></a><div class="docs-package-name"><span class="docs-autofit">GuidedProposals.jl</span></div><form class="docs-search" action="../../search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><a class="tocitem" href="../../">Home</a></li><li><a class="tocitem" href="../../get_started/overview/">Get started</a></li><li><input class="collapse-toggle" id="menuitem-3" type="checkbox"/><label class="tocitem" for="menuitem-3"><span class="docs-label">User manual</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../../manual/guid_prop/">Guided proposals</a></li><li><a class="tocitem" href="../../manual/multiple_obs/">Multiple observations</a></li><li><a class="tocitem" href="../../manual/log_likelihood/">Log-likelihoods</a></li><li><a class="tocitem" href="../../manual/reparameterizations/">Reparameterizations</a></li><li><a class="tocitem" href="../../manual/bffg/">BFFG algorithm</a></li><li><a class="tocitem" href="../../manual/path_functionals/">Computing path functionals</a></li><li><a class="tocitem" href="../../manual/ode_type/">(TODO) ODE systems</a></li></ul></li><li><input class="collapse-toggle" id="menuitem-4" type="checkbox" checked/><label class="tocitem" for="menuitem-4"><span class="docs-label">How to...</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../sample_bridges/">(TODO) Sample diffusion bridges</a></li><li><a class="tocitem" href="../first_passage_time/">(TODO) Sample diffusions in first-passage time setting</a></li><li class="is-active"><a class="tocitem" href>...smooth trajectories</a></li><li><a class="tocitem" href="../blocking/">...do blocking</a></li><li><a class="tocitem" href="../parameter_inference/">...infer parameters</a></li></ul></li><li><input class="collapse-toggle" id="menuitem-5" type="checkbox"/><label class="tocitem" for="menuitem-5"><span class="docs-label">Tutorials</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../../tutorials/in_place_vs_out_of_place/">(TODO) Understanding in-place vs out-of-place</a></li><li><a class="tocitem" href="../../tutorials/smoothing/">Smoothing trajectories of the partially observed FitzHugh–Nagumo diffusion</a></li><li><a class="tocitem" href="../../tutorials/blocking/">Setting up a blocking scheme for a simple smoothing problem</a></li><li><a class="tocitem" href="../../tutorials/parameter_inference/">Parameter inference</a></li></ul></li><li><a class="tocitem" href="../../module_index/">Index</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">How to...</a></li><li class="is-active"><a href>...smooth trajectories</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>...smooth trajectories</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/JuliaDiffusionBayes/GuidedProposals.jl/blob/master/docs/src/how_to_guides/smoothing.md#L" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id="how_to_smoothing-1"><a class="docs-heading-anchor" href="#how_to_smoothing-1">How to do smoothing of diffusion trajectories?</a><a class="docs-heading-anchor-permalink" href="#how_to_smoothing-1" title="Permalink"></a></h1><hr/><p><strong>Smoothing</strong> is a process of reconstructing the unobserved parts of the path, based on the recorded observations.</p><pre><code class="language-julia"># Perform smoothing for the data in the `recording`, using Guided Proposals with
+# the auxiliary law `AuxLaw`.
+function simple_smoothing(AuxLaw, recording, dt; ρ=0.5, num_steps=10^4)
+    # -------------------------------------------------------------------------#
+    #                          Initializations                                 #
+    # -------------------------------------------------------------------------#
+    # time-grids for the forward-simulation of trajectories                    #
+    tts = OBS.setup_time_grids(recording, dt)                                  #
+    # laws of guided proposals                                                 #
+    PP = build_guid_prop(AuxLaw, recording, tts)                               #
+                                                                               #
+    # starting point                                                           #
+    # NOTE `rand` for `KnownStartingPt` simply returns the starting position   #
+    y1 = rand(recording.x0_prior)                                              #
+    # initialize the `accepted` trajectory                                     #
+    XX, WW, Wnr = rand(PP, y1)                                                 #
+    # initialize the containers for the `proposal` trajectory                  #
+    XX°, WW° = trajectory(PP)                                                  #
+                                                                               #
+    ll = loglikhd(PP, XX)                                                      #
+    paths = []                                                                 #
+    num_accpt = 0                                                              #
+    # -------------------------------------------------------------------------#
+
+    # MCMC
+    for i in 1:num_steps
+        # impute a path
+        _, ll° = rand!(PP, XX°, WW°, WW, ρ, Val(:ll), y1; Wnr=Wnr)
+
+        # Metropolis–Hastings accept/reject step
+        if rand() &lt; exp(ll°-ll)
+            XX, WW, XX°, WW° = XX°, WW°, XX, WW
+            ll = ll°
+            num_accpt += 1
+        end
+
+        # progress message
+        if i % 100 == 0
+            println(&quot;$i. ll=$ll, acceptance rate: $(num_accpt/100)&quot;)
+            num_accpt = 0
+        end
+
+        # save intermediate path for plotting
+        i % 400 == 0 &amp;&amp; append!(paths, [deepcopy(XX)])
+    end
+    paths
+end</code></pre><h3 id="Example-1"><a class="docs-heading-anchor" href="#Example-1">Example</a><a class="docs-heading-anchor-permalink" href="#Example-1" title="Permalink"></a></h3><p>For instance, for a partially observed FitzHugh–Nagumo model</p><pre><code class="language-julia">recording = ...
+paths = simple_smoothing(
+    FitzHughNagumoAux, recording, 0.001; ρ=0.96, num_steps=10^4
+)</code></pre><p><img src="../../assets/how_to/smoothing/paths.png" alt="paths"/></p><p>It takes about 6sec on my laptop.</p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../first_passage_time/">« (TODO) Sample diffusions in first-passage time setting</a><a class="docs-footer-nextpage" href="../blocking/">...do blocking »</a></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Sunday 5 July 2020 01:03">Sunday 5 July 2020</span>. Using Julia version 1.4.2.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

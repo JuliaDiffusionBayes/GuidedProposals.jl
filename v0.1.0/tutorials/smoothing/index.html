@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Smoothing trajectories of the partially observed FitzHugh–Nagumo diffusion · GuidedProposals.jl</title><link href="https://fonts.googleapis.com/css?family=Lato|Roboto+Mono" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.11.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.11.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.11.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.11.1/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><a class="docs-logo" href="../../"><img src="../../assets/logo.png" alt="GuidedProposals.jl logo"/></a><div class="docs-package-name"><span class="docs-autofit">GuidedProposals.jl</span></div><form class="docs-search" action="../../search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><a class="tocitem" href="../../">Home</a></li><li><a class="tocitem" href="../../get_started/overview/">Get started</a></li><li><input class="collapse-toggle" id="menuitem-3" type="checkbox"/><label class="tocitem" for="menuitem-3"><span class="docs-label">User manual</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../../manual/guid_prop/">Guided proposals</a></li><li><a class="tocitem" href="../../manual/multiple_obs/">Multiple observations</a></li><li><a class="tocitem" href="../../manual/log_likelihood/">Log-likelihoods</a></li><li><a class="tocitem" href="../../manual/reparameterizations/">Reparameterizations</a></li><li><a class="tocitem" href="../../manual/bffg/">BFFG algorithm</a></li><li><a class="tocitem" href="../../manual/path_functionals/">Computing path functionals</a></li><li><a class="tocitem" href="../../manual/ode_type/">(TODO) ODE systems</a></li></ul></li><li><input class="collapse-toggle" id="menuitem-4" type="checkbox"/><label class="tocitem" for="menuitem-4"><span class="docs-label">How to...</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../../how_to_guides/sample_bridges/">(TODO) Sample diffusion bridges</a></li><li><a class="tocitem" href="../../how_to_guides/first_passage_time/">(TODO) Sample diffusions in first-passage time setting</a></li><li><a class="tocitem" href="../../how_to_guides/smoothing/">...smooth trajectories</a></li><li><a class="tocitem" href="../../how_to_guides/blocking/">...do blocking</a></li><li><a class="tocitem" href="../../how_to_guides/parameter_inference/">...infer parameters</a></li></ul></li><li><input class="collapse-toggle" id="menuitem-5" type="checkbox" checked/><label class="tocitem" for="menuitem-5"><span class="docs-label">Tutorials</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../in_place_vs_out_of_place/">(TODO) Understanding in-place vs out-of-place</a></li><li class="is-active"><a class="tocitem" href>Smoothing trajectories of the partially observed FitzHugh–Nagumo diffusion</a><ul class="internal"><li><a class="tocitem" href="#Introduction-1"><span>Introduction</span></a></li><li><a class="tocitem" href="#Prerequisites-1"><span>Prerequisites</span></a></li><li><a class="tocitem" href="#Data-generation-1"><span>Data generation</span></a></li><li><a class="tocitem" href="#Data-preparation-1"><span>Data preparation</span></a></li><li><a class="tocitem" href="#Smoothing-algorithm-1"><span>Smoothing algorithm</span></a></li><li><a class="tocitem" href="#Running-the-algorithm-1"><span>Running the algorithm</span></a></li><li><a class="tocitem" href="#Results-1"><span>Results</span></a></li><li><a class="tocitem" href="#Concluding-remarks-1"><span>Concluding remarks</span></a></li><li class="toplevel"><a class="tocitem" href="#Full-code-from-the-tutorial-1"><span>Full code from the tutorial</span></a></li></ul></li><li><a class="tocitem" href="../blocking/">Setting up a blocking scheme for a simple smoothing problem</a></li><li><a class="tocitem" href="../parameter_inference/">Parameter inference</a></li></ul></li><li><a class="tocitem" href="../../module_index/">Index</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Tutorials</a></li><li class="is-active"><a href>Smoothing trajectories of the partially observed FitzHugh–Nagumo diffusion</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Smoothing trajectories of the partially observed FitzHugh–Nagumo diffusion</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/JuliaDiffusionBayes/GuidedProposals.jl/blob/master/docs/src/tutorials/smoothing.md#L" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id="tutorial_smoothing-1"><a class="docs-heading-anchor" href="#tutorial_smoothing-1">Smoothing trajectories of the partially observed FitzHugh–Nagumo diffusion</a><a class="docs-heading-anchor-permalink" href="#tutorial_smoothing-1" title="Permalink"></a></h1><hr/><blockquote><p>In this tutorial we will smooth trajectories of a diffusion process, based on discrete-time observations of its sampled trajectory. We will apply the algorithm to an example of a hypoelliptic FitzHugh—Nagumo model.</p></blockquote><div class="admonition"><header class="admonition-header">note</header><div class="admonition-body"><p>The most convenient way of smoothing diffusion trajectories is to use the <a href="https://github.com/JuliaDiffusionBayes/DiffusionMCMC.jl">DiffusionMCMC.jl</a> package. For the pedagogical purposes we explain how to do it without this package, using solely <a href="https://github.com/JuliaDiffusionBayes/DiffusionDefinition.jl">DiffusionDefinition.jl</a>, <a href="https://github.com/JuliaDiffusionBayes/ObservationSchemes.jl">ObservationSchemes.jl</a> and <a href="https://github.com/JuliaDiffusionBayes/GuidedProposals.jl">GuidedProposals.jl</a>.</p></div></div><h2 id="Introduction-1"><a class="docs-heading-anchor" href="#Introduction-1">Introduction</a><a class="docs-heading-anchor-permalink" href="#Introduction-1" title="Permalink"></a></h2><hr/><p>FitzHugh—Nagumo model is given by the following system of ODEs:</p><div>\[\begin{align*}
+\frac{\dd}{\dd t} y(t) &amp;= \frac{1}{ϵ}\left( y(t) - y^3(t)-x(t) + s \right ),\\
+\frac{\dd}{\dd t} x(t) &amp;= γ y(t) - x(t) + β,
+\end{align*}\]</div><p>where <span>$(ϵ, s, γ, β)$</span> are the model parameters. A stochastic version of this model is obtained by adding a Wiener noise to top, bottom or both terms above. For this tutorial we consider the following hypoelliptic stochastic differential equation corresponding to a stochastic version of the FitzHugh–Nagumo model:</p><div>\[\begin{align*}
+\dd Y_t &amp;= \frac{1}{\epsilon}\left( Y_t - Y_t^3-X_t + s \right )\dd t,\\
+\dd X_t &amp;= \left( \gamma Y_t - X_t + \beta \right )\dd t + \sigma \dd W_t,
+\end{align*}\]</div><p>where <span>$σ&gt;0$</span> is an additional parameter.</p><h2 id="Prerequisites-1"><a class="docs-heading-anchor" href="#Prerequisites-1">Prerequisites</a><a class="docs-heading-anchor-permalink" href="#Prerequisites-1" title="Permalink"></a></h2><hr/><p>In order to run this tutorial we need the following packages</p><pre><code class="language-julia">using GuidedProposals, DiffusionDefinition, ObservationSchemes
+const GP = GuidedProposals
+const DD = DiffusionDefinition
+const OBS = ObservationSchemes
+
+using StaticArrays, Random, Plots</code></pre><h2 id="Data-generation-1"><a class="docs-heading-anchor" href="#Data-generation-1">Data generation</a><a class="docs-heading-anchor-permalink" href="#Data-generation-1" title="Permalink"></a></h2><hr/><p>FitzHugh–Nagumo model is—among other things—used in neuroscience to model the evolution of membrane potential of neurons. We could apply this tutorial to this type of data—i.e. recording of membrane potential of some neurons, but to keep the tutorial self-contained and simple we will simply generate the data from the model using some fixed, reasonable values for the parameters.</p><p>The model is already pre-defined for us and it can be loaded-in using <a href="https://github.com/JuliaDiffusionBayes/DiffusionDefinition.jl">DiffusionDefinition.jl</a>.</p><pre><code class="language-julia">@load_diffusion FitzHughNagumo</code></pre><p>Reasonable parameter values that we use over and over again with the FitzHugh–Nagumo model for the purpose of explaining various aspect of the package are:</p><pre><code class="language-julia">θ = [0.1, -0.8, 1.5, 0.0, 0.3]</code></pre><p>Let&#39;s initialize the law and sample it over an interval <span>$[0,10]$</span>.</p><pre><code class="language-julia">P = FitzHughNagumo(θ...)
+tt, y1 = 0.0:0.0001:10.0, @SVector [-0.9, -1.0]
+X = rand(P, tt, y1)</code></pre><p>And let&#39;s suppose that we observe the first coordinate of the process every <span>$0.1$</span> units of time, subject to some Gaussian noise.</p><pre><code class="language-julia">data = map(
+    x-&gt;(x[1], x[2][1] + 0.1randn()),
+    collect(zip(X.t, X.x))[1:1000:end]
+)[2:end]</code></pre><p>Let&#39;s visualize what we&#39;ve sampled</p><pre><code class="language-julia"># let&#39;s examine the data
+plot(X, Val(:vs_time), size=(800, 300))
+scatter!(map(x-&gt;x[1], data), map(x-&gt;x[2], data), label=&quot;data&quot;)</code></pre><p><img src="../../assets/tutorials/smoothing/data.png" alt="data"/></p><h2 id="Data-preparation-1"><a class="docs-heading-anchor" href="#Data-preparation-1">Data preparation</a><a class="docs-heading-anchor-permalink" href="#Data-preparation-1" title="Permalink"></a></h2><hr/><p>Before we can start thinking about smoothing we must prepare the data. This boils down to</p><ol><li>decorating every observation with appropriate information regarding how the data point was collected</li><li>adding necessary information about the underlying law of the process</li><li>adding information about the starting point</li></ol><p>This can be easily accomplished using some of the functionality from the package <a href="https://github.com/JuliaDiffusionBayes/ObservationSchemes.jl">ObservationSchemes.jl</a>, as follows:</p><pre><code class="language-julia">recording = (
+    P = P, # diffusion law
+    obs = load_data(
+        ObsScheme(
+            LinearGsnObs(
+                0.0, (@SVector [0.0]); # dummy variables indicating datatype of observations
+                L=(@SMatrix [1.0 0.0]), # observation operator
+                Σ=(@SMatrix [0.01]) # noise on the observations
+            )
+        ),
+        data
+    ),
+    t0 = 0.0,
+    x0_prior = KnownStartingPt(y1),
+)</code></pre><h2 id="Smoothing-algorithm-1"><a class="docs-heading-anchor" href="#Smoothing-algorithm-1">Smoothing algorithm</a><a class="docs-heading-anchor-permalink" href="#Smoothing-algorithm-1" title="Permalink"></a></h2><hr/><p>To do smoothing we will need to</p><ol><li>initialize structs of <code>GuidProp</code> that will define the laws of guided proposals</li><li>repeatedly sample the trajectories of those <code>GuidProp</code> and compute their log-likelihoods</li><li>embed the sampler above inside a Metropolis–Hastings algorithm</li></ol><p>Instead of writing everything in a single routine, as is done in a <a href="../../how_to_guides/smoothing/#how_to_smoothing-1">how-to-guide</a> for simplicity, we will define some structs to make our code look a bit nicer, as well as do some ground work for the subsequent tutorials.</p><p>We can define a <code>Workspace</code> which will contain all containers that are needed to sample from guided proposals.</p><pre><code class="language-julia">mutable struct Workspace{GP,TX,TW,TWnr,Ty1}
+    PP::Vector{GP}
+    XX::Vector{TX}
+    XX°::Vector{TX}
+    WW::Vector{TW}
+    WW°::Vector{TW}
+    ρ::Float64
+    Wnr::TWnr
+    y1::Ty1
+
+    function Workspace(AuxLaw, recording, dt, ρ)
+        # time-grids for the forward-simulation of trajectories
+        tts = OBS.setup_time_grids(recording, dt, standard_guid_prop_time_transf)
+        # laws of guided proposals
+        PP = build_guid_prop(AuxLaw, recording, tts)
+
+        y1 = rand(recording.x0_prior)
+        # initialize the `accepted` trajectory
+        XX, WW, Wnr = rand(PP, y1)
+        # initialize the containers for the `proposal` trajectory
+        XX°, WW° = trajectory(PP)
+
+        # initialize the workspace
+        new{eltype(PP),eltype(XX),eltype(WW),typeof(Wnr),typeof(y1)}(
+            PP, XX, XX°, WW, WW°, ρ, Wnr, y1
+        )
+    end
+end</code></pre><p>We can also define two functions for <code>Workspace</code>: one which samples a proposal trajectory using a preconditioned Crank—Nicolson scheme and computes the log-likelihood, and another, that swaps relevant containers in an event that the proposal is accepted:</p><pre><code class="language-julia">function draw_proposal!(ws::Workspace)
+    _, ll° = rand!(
+        ws.PP, ws.XX°, ws.WW°, ws.WW, ws.ρ, Val(:ll), ws.y1;
+        Wnr=ws.Wnr
+    )
+    ll°
+end
+
+function swap_paths!(ws::Workspace)
+    ws.XX, ws.XX° = ws.XX°, ws.XX
+    ws.WW, ws.WW° = ws.WW°, ws.WW
+end</code></pre><p>We can now define a smoothing algorithm very easily:</p><pre><code class="language-julia">function simple_smoothing(AuxLaw, recording, dt; ρ=0.5, num_steps=10^4)
+    ws = Workspace(AuxLaw, recording, dt, ρ)
+    ll = loglikhd(ws.PP, ws.XX)
+    paths = []
+    num_accpt = 0
+
+    # MCMC
+    for i in 1:num_steps
+        # impute a path
+        ll° = draw_proposal!(ws)
+        # Metropolis–Hastings accept/reject step
+        if rand() &lt; exp(ll°-ll)
+            swap_paths!(ws)
+            ll = ll°
+            num_accpt += 1
+        end
+
+        # progress message
+        if i % 100 == 0
+            println(&quot;$i. ll=$ll, acceptance rate: $(num_accpt/100)&quot;)
+            num_accpt = 0
+        end
+
+        # save intermediate path for plotting
+        i % 400 == 0 &amp;&amp; append!(paths, [deepcopy(ws.XX)])
+    end
+    paths
+end</code></pre><h2 id="Running-the-algorithm-1"><a class="docs-heading-anchor" href="#Running-the-algorithm-1">Running the algorithm</a><a class="docs-heading-anchor-permalink" href="#Running-the-algorithm-1" title="Permalink"></a></h2><hr/><p>To run the algorithm we need to load-in a pre-defined auxiliary law and the simply call the main routine</p><pre><code class="language-julia">@load_diffusion FitzHughNagumoAux
+paths = simple_smoothing(
+    FitzHughNagumoAux, recording, 0.001; ρ=0.96, num_steps=10^4
+)</code></pre><p>That&#39;s it! It takes about 6 seconds to run on my laptop.</p><h2 id="Results-1"><a class="docs-heading-anchor" href="#Results-1">Results</a><a class="docs-heading-anchor-permalink" href="#Results-1" title="Permalink"></a></h2><hr/><p>To inspect the results we need to plot the returned paths. To visualize multiple paths defined over multiple intervals it is wise to first reduce the number of individual objects passed to plotting functions by grouping together objects that will end up looking indistinguishable on the canvas anyway. For us, this refers to segments of paths on each sub-interval. This can be done as follows:</p><pre><code class="language-julia">function glue_paths(XX)
+    XX_glued = trajectory(
+        glue_containers( map(x-&gt;x.t, XX) ),
+        glue_containers( map(x-&gt;x.x, XX) ),
+    )
+end
+
+function glue_containers(xs)
+    glued_xs = collect(Iterators.flatten(map(x-&gt;x[1:end-1], xs)))
+    append!(glued_xs, [xs[end][end]])
+    glued_xs
+end
+
+convenient_paths = glue_paths.(paths)</code></pre><p>We may now visualize the results very simply:</p><pre><code class="language-julia">col = [&quot;#581845&quot;, &quot;#900C3F&quot;, &quot;#C70039&quot;, &quot;#FF5733&quot;, &quot;#FFC300&quot;]
+
+p = plot(size=(1000, 500))
+for path in convenient_paths
+	plot!(p, path, Val(:vs_time), alpha=0.4, label=&quot;&quot;, color=[col[3] col[1]])
+end
+plot!(X, Val(:vs_time), color=[col[5] col[4]], linewidth=[3 0.5], label=[&quot;underlying X₁&quot; &quot;underlying X₂&quot;])
+scatter!(p, map(x-&gt;x[1], data), map(x-&gt;x[2], data), label=&quot;data&quot;, markercolor=col[5])
+display(p)</code></pre><p><img src="../../assets/tutorials/smoothing/paths.png" alt="paths"/></p><h2 id="Concluding-remarks-1"><a class="docs-heading-anchor" href="#Concluding-remarks-1">Concluding remarks</a><a class="docs-heading-anchor-permalink" href="#Concluding-remarks-1" title="Permalink"></a></h2><hr/><p>TODO</p><div class="admonition is-success"><header class="admonition-header">Tip</header><div class="admonition-body"><p>It should be straightforward to extend this tutorial to other diffusion laws.</p></div></div><h1 id="Full-code-from-the-tutorial-1"><a class="docs-heading-anchor" href="#Full-code-from-the-tutorial-1">Full code from the tutorial</a><a class="docs-heading-anchor-permalink" href="#Full-code-from-the-tutorial-1" title="Permalink"></a></h1><hr/><pre><code class="language-julia">using GuidedProposals, DiffusionDefinition, ObservationSchemes
+const GP = GuidedProposals
+const DD = DiffusionDefinition
+const OBS = ObservationSchemes
+
+using StaticArrays, Random, Plots
+
+# seed used for this tutorial
+Random.seed!(100)
+
+@load_diffusion FitzHughNagumo
+θ = [0.1, -0.8, 1.5, 0.0, 0.3]
+P = FitzHughNagumo(θ...)
+tt, y1 = 0.0:0.0001:10.0, @SVector [-0.9, -1.0]
+X = rand(P, tt, y1)
+data = map(
+	x-&gt;(x[1], x[2][1] + 0.1randn()),
+	collect(zip(X.t, X.x))[1:1000:end]
+)[2:end]
+
+plot(X, Val(:vs_time), size=(800, 300))
+scatter!(map(x-&gt;x[1], data), map(x-&gt;x[2], data), label=&quot;data&quot;)
+
+recording = (
+    P = P, # diffusion law
+    obs = load_data(
+        ObsScheme(
+            LinearGsnObs(
+                0.0, (@SVector [0.0]); # dummy variables indicating datatype of observations
+                L=(@SMatrix [1.0 0.0]), # observation operator
+                Σ=(@SMatrix [0.01]) # noise on the observations
+            )
+        ),
+        data
+    ),
+    t0 = 0.0,
+    x0_prior = KnownStartingPt(y1),
+)
+
+mutable struct Workspace{GP,TX,TW,TWnr,Ty1}
+    PP::Vector{GP}
+    XX::Vector{TX}
+    XX°::Vector{TX}
+    WW::Vector{TW}
+    WW°::Vector{TW}
+    ρρ::Vector{Float64}
+    Wnr::TWnr
+    y1::Ty1
+
+    function Workspace(AuxLaw, recording, dt, ρ)
+        # time-grids for the forward-simulation of trajectories
+        tts = OBS.setup_time_grids(recording, dt, standard_guid_prop_time_transf)
+        # memory parameters for the preconditioned Crank-Nicolson scheme
+        ρρ = [ρ for _ in tts]
+        # laws of guided proposals
+        PP = build_guid_prop(AuxLaw, recording, tts)
+
+        y1 = rand(recording.x0_prior)
+        # initialize the `accepted` trajectory
+        XX, WW, Wnr = rand(PP, y1)
+        # initialize the containers for the `proposal` trajectory
+        XX°, WW° = trajectory(PP)
+
+        # initialize the workspace
+        new{eltype(PP),eltype(XX),eltype(WW),typeof(Wnr),typeof(y1)}(
+            PP, XX, XX°, WW, WW°, ρρ, Wnr, y1
+        )
+    end
+end
+
+function draw_proposal!(ws::Workspace)
+    _, ll° = rand!(
+        ws.PP, ws.XX°, ws.WW°, ws.WW, ws.ρρ, Val(:ll), ws.y1;
+        Wnr=ws.Wnr
+    )
+    ll°
+end
+
+function swap_paths!(ws::Workspace)
+    ws.XX, ws.XX° = ws.XX°, ws.XX
+    ws.WW, ws.WW° = ws.WW°, ws.WW
+end
+
+function simple_smoothing(AuxLaw, recording, dt; ρ=0.5, num_steps=10^4)
+    ws = Workspace(AuxLaw, recording, dt, ρ)
+    ll = loglikhd(ws.PP, ws.XX)
+    paths = []
+    num_accpt = 0
+
+    # MCMC
+    for i in 1:num_steps
+        # impute a path
+        ll° = draw_proposal!(ws)
+        # Metropolis–Hastings accept/reject step
+        if rand() &lt; exp(ll°-ll)
+            swap_paths!(ws)
+            ll = ll°
+            num_accpt += 1
+        end
+
+        # progress message
+        if i % 100 == 0
+            println(&quot;$i. ll=$ll, acceptance rate: $(num_accpt/100)&quot;)
+            num_accpt = 0
+        end
+
+        # save intermediate path for plotting
+        i % 400 == 0 &amp;&amp; append!(paths, [deepcopy(ws.XX)])
+    end
+    paths
+end
+
+@load_diffusion FitzHughNagumoAux
+paths = simple_smoothing(
+    FitzHughNagumoAux, recording, 0.001; ρ=0.96, num_steps=10^4
+)
+
+function glue_paths(XX)
+    XX_glued = trajectory(
+        glue_containers( map(x-&gt;x.t, XX) ),
+        glue_containers( map(x-&gt;x.x, XX) ),
+    )
+end
+
+function glue_containers(xs)
+    glued_xs = collect(Iterators.flatten(map(x-&gt;x[1:end-1], xs)))
+    append!(glued_xs, [xs[end][end]])
+    glued_xs
+end
+
+convenient_paths = glue_paths.(paths)
+
+col = [&quot;#581845&quot;, &quot;#900C3F&quot;, &quot;#C70039&quot;, &quot;#FF5733&quot;, &quot;#FFC300&quot;]
+
+p = plot(size=(1000, 500))
+for path in convenient_paths
+	plot!(p, path, Val(:vs_time), alpha=0.4, label=&quot;&quot;, color=[col[3] col[1]])
+end
+plot!(X, Val(:vs_time), color=[col[5] col[4]], linewidth=[3 0.5], label=[&quot;underlying X₁&quot; &quot;underlying X₂&quot;])
+scatter!(p, map(x-&gt;x[1], data), map(x-&gt;x[2], data), label=&quot;data&quot;, markercolor=col[5])
+display(p)</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../in_place_vs_out_of_place/">« (TODO) Understanding in-place vs out-of-place</a><a class="docs-footer-nextpage" href="../blocking/">Setting up a blocking scheme for a simple smoothing problem »</a></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Sunday 5 July 2020 01:03">Sunday 5 July 2020</span>. Using Julia version 1.4.2.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
