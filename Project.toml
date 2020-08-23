@@ -15,7 +15,7 @@ StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 Trajectories = "2c80a279-213e-54d7-a557-e9a14725db56"
 
 [compat]
-DiffEqCallbacks = "~2.13"
+DiffEqCallbacks = "~2.13, 2.14"
 DiffusionDefinition = "~0.1"
 ObservationSchemes = "~0.1"
 OrdinaryDiffEq = "~5.41"
